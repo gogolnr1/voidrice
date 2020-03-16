@@ -279,7 +279,7 @@ bindsym $mod+Shift+plus		exec --no-startup-id amixer sset Master 15%+ && pkill -
 bindsym $mod+minus 		exec --no-startup-id amixer sset Master 5%- && pkill -RTMIN+10 i3blocks
 bindsym $mod+Shift+minus	exec --no-startup-id amixer sset Master 15%- && pkill -RTMIN+10 i3blocks
 bindsym $mod+less 		exec --no-startup-id mpc prev
-bindsym $mod+Shift+less		ex+-+-ec --no-startup-id mpc seek 0%
+bindsym $mod+Shift+less		exec --no-startup-id mpc seek 0%
 bindsym $mod+greater		exec --no-startup-id mpc next
 bindsym $mod+Shift+greater	exec --no-startup-id mpc next
 
