@@ -1,0 +1,15 @@
+#!/bin/bash
+
+wget_url=$(xclip -selection clipboard -o -print0)
+
+continueit () {
+	echo "[o]verwite or [c]ontinue?"
+	read ANSWER
+	case $ANSWER in
+		[o]) rm $1 && false ;;
+		[c]) true ;;
+		*) exit 1 ;;
+	esac
+}
+
+[ -f "$1" ] && continueit $1 && wget -c "$wget_url" -O "$1" || wget "$wget_url" -O "$1"
