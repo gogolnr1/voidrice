@@ -12,14 +12,7 @@ monitors=$(xrandr --listmonitors | awk '{ if ($4 != "") print $4}')
 # Location of link to wallpaper link.
 bglocs=("${XDG_DATA_HOME:-$HOME/.local/share/}/bg")
 
-i=0
-for monitor in ${monitors[@]}; do
-	if [[ $i -gt 0 ]]; then
-		bglocs+=("${bglocs[0]}$i")
-	fi
-	(( i++ ))
-done
-
+# rotate the background to the next screen
 rotate () {
 	i=${#bglocs[@]}
 	while [[ $i -gt 1 ]]; do
@@ -28,11 +21,20 @@ rotate () {
 	done
 }
 
+# bg file for each monitor
+i=0
+for monitor in ${monitors[@]}; do
+	if [[ $i -gt 0 ]]; then
+		bglocs+=("${bglocs[0]}$i")
+	fi
+	(( i++ ))
+done
+
 trueloc="$(readlink -f "$1")" &&
 case "$(file --mime-type -b "$trueloc")" in
 	image/* )
 		rotate &&
-		ln -sf $(readlink -f "$1") ${bglocs[0]} && notify-send -i "$1" "Changing wallpaper..."
+		ln -sf $(readlink -f "$1") ${bglocs[0]} && notify-send -i "${bglocs[0]}" "Changing wallpaper..."
 		;;
 	inode/directory ) ln -sf "$(find "$trueloc" -iregex '.*.\(jpg\|jpeg\|png\|gif\)' -type f | shuf -n 1)" "$bgloc" && notify-send -i "$bgloc1" "Random Wallpaper chosen." ;;
 	*) notify-send "Error" "Not a valid image." ; exit 1;;
