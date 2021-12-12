@@ -107,3 +107,7 @@ map W $setsid -f $TERMINAL >/dev/null 2>&1
 
 # Source Bookmarks
 source "~/.config/lf/shortcutrc"
+
+$if [[ -n "$LF_UEBERZUG_TEMPDIR" ]]; do
+  source "~/.config/lf-ueberzug/lfrc-ueberzug"
+fi
