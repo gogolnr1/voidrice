@@ -1,0 +1,6 @@
+clear Lock
+! keycode 9 = Caps_Lock NoSymbol Caps_Lock
+keycode 66 = Escape NoSymbol Escape
+
+keycode  16 = 7 numbersign 0 parenright braceleft NoSymbol oneeighth leftarrow braceleft
+keycode  51 = slash apostrophe backslash bar registered NoSymbol schwa SCHWA seconds
