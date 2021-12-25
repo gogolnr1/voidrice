@@ -1,0 +1,11 @@
+_clipboard () {
+	echo -n "$(greenclip print | $@)" | xclip -selection clipboard
+}
+
+dmenu-clipboard () {
+	_clipboard dmenu -i -l 50
+}
+
+fzf-clipboard () {
+	_clipboard fzf -e -i
+}
