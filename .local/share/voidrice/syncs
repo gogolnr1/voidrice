@@ -1,0 +1,160 @@
+#!/bin/bash
+# Todo:
+# .local/share/voidrice gitify
+# yandex-disk & dropbox
+
+readonly HOME_DIR="/home/$USER"
+readonly MUSIC_DIR="/run/mount/41G-PART/Musik"
+
+readonly BACKUP_STICK1="/run/mount/usb/32G-SANDISK"
+readonly BACKUP_STICK2="/run/mount/usb/16G-VERBATIM"
+
+readonly BACKUP_DATA1="/run/mount/41G-PART" #50GB-PART
+readonly BACKUP_DATA2="/run/mount/usb/800G-GRAUGEAR" #1TB-GRAYGEAR
+
+# check options
+while test $# -gt 0
+do
+    case "$1" in
+        restore) restore=1
+            ;;
+        hot) hot=1 ;;
+        -d|--docs) docs=1 ;;
+        -b|--books) books=1 ;;
+        -m|--music) music=1 ;;
+        -v|--videos) videos=1 ;;
+        -h|--home) home=1 ;;
+        *) echo "argument $1" ;;
+    esac
+    shift
+done
+
+[[ -v home ]] ||\
+[[ -v docs ]] ||\
+[[ -v books ]] ||\
+[[ -v music ]] ||\
+[[ -v videos ]] ||\
+	all=1
+
+# -a = --archive
+# -P = --partial --progress
+# --delete deletes on destination side
+# --delete-excluded deletes "non-empty" folders on destination side
+# --copy-links includes rules that lead to symbolicaly linked locations
+# --ignore-existing ignores existing files on destination side
+#rsync_arguments_home="-aP --delete --delete-excluded --copy-links"
+rsync_arguments_home="-aP --delete \
+	--backup --backup-dir=.DELETED_FILES_$(date "+%Y_%m_%d-%H_%M_%S") \
+	--copy-links"
+rsync_arguments_media="-aP --copy-links"
+rsync_arguments_restore="-aP --ignore-existing --exclude '.local/bin/'"
+
+_rsync () {
+  rsync --dry-run "$@"
+  rsync --dry-run "$@"|grep denied
+  [[ -v hot ]] && rsync "$@" || echo "$@"
+}
+
+### backup home ###
+backup_home () {
+  printf "\nhome:\n"
+  local home_filter="${HOME_DIR}/.local/share/voidrice/sync_resources/home_filter.txt"
+  local home_excludes="${HOME_DIR}/.local/share/voidrice/sync_resources/home_excludes.txt"
+
+  [ -d "$BACKUP_STICK1" ] && BACKUP_STICK="$BACKUP_STICK1" || BACKUP_STICK="$BACKUP_DATA2/BACKUP_STICK"
+  if [ -d "$BACKUP_STICK" ]; then
+    _rsync ${rsync_arguments_home} --filter="merge ${home_filter}" $HOME_DIR/ ${BACKUP_STICK1}/B
+	#--exclude="${HOME_EXCLUDES}" \
+
+    if [ -d "$HOME_DIR/../rstudio" ]; then
+      _rsync ${rsync_arguments_home} $HOME_DIR/../rstudio/ ${BACKUP_STICK1}/B/home_rstudio
+    fi
+
+    if [ -d "${HOME_DIR}/ydisk" ]; then
+      _rsync ${rsync_arguments_home} ${HOME_DIR}/ydisk/ ${BACKUP_STICK1}/ydisk
+    fi
+  fi
+}
+
+### stick-to-stick backup ###
+stick_to_stick () {
+  printf "\nsticks:\n"
+  local excludes="${HOME_DIR}/.local/share/voidrice/sync_resources/excludes_stick.txt"
+
+  if [ -d "$BACKUP_STICK1" ] && [ -d "$BACKUP_STICK2" ]; then
+    _rsync ${rsync_arguments_home} --exclude-from="${excludes}" $BACKUP_STICK1 $BACKUP_STICK2
+  fi
+
+  if [ -d "$BACKUP_STICK1" ] && [ -d "$BACKUP_DATA2" ]; then
+    _rsync ${rsync_arguments_home} --exclude-from="${excludes}" $BACKUP_STICK1/ $BACKUP_DATA2/BACKUP_STICK
+  fi
+}
+
+backup_music () {
+  printf "\nmusic:\n"
+  if [ -d "$HOME_DIR/Music" ] && [ -d "$BACKUP_DATA2" ]; then
+    _rsync ${rsync_arguments_media} ${MUSIC_DIR} ${BACKUP_DATA2}/
+  fi
+}
+
+backup_documents () {
+  printf "\ndocuments:\n"
+  if [ -d "$HOME_DIR/Documents" ]; then
+    if [ -d "$BACKUP_STICK1" ]; then
+      _rsync ${rsync_arguments_home} ${HOME_DIR}/Documents/ ${BACKUP_STICK1}/D
+      _rsync ${rsync_arguments_home} ${HOME_DIR}/Pictures/ ${BACKUP_STICK1}/P
+    elif [ -d "$BACKUP_DATA2" ]; then
+      _rsync ${rsync_arguments_home} ${HOME_DIR}/Documents/ ${BACKUP_DATA2}/BACKUP_STICK/D
+      _rsync ${rsync_arguments_home} ${HOME_DIR}/Pictures/ ${BACKUP_DATA2}/BACKUP_STICK/P
+    fi
+  fi
+}
+
+backup_movies () {
+  printf "\nmovies:\n"
+  local videos_filter="${HOME_DIR}/.local/share/voidrice/sync_resources/videos_filter.txt"
+  if [ -d "$HOME_DIR/Videos" ]; then
+    if [ -d "$BACKUP_DATA2" ]; then
+      _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA2}/Videos
+    elif [ -d "$BACKUP_DATA1" ]; then
+      _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA1}/Videos
+
+      # delete files in root (source & dest) which exist in subfolders (of dest after first rsync)
+      # then sync root for unsorted videos
+      #_rsync ${rsync_arguments_media} ${HOME_DIR}/Videos ${BACKUP_DATA1}/
+    fi
+  fi
+}
+
+backup_books () {
+  printf "\nbooks:\n"
+  local book_dirname="Calibre Library"
+  if [ -d "$HOME_DIR/$book_dirname" ] && [ -d "$BACKUP_DATA1" ]; then
+    _rsync ${rsync_arguments_media} "$HOME_DIR/$book_dirname" "$BACKUP_DATA1/"
+
+    if [ -d "$BACKUP_DATA2" ]; then
+      _rsync ${rsync_arguments_media} "$BACKUP_DATA1/$book_dirname" "$BACKUP_DATA2/"
+    fi
+  fi
+}
+
+restore_home () {
+  printf "\nrestore:\n"
+  if [ -d "$BACKUP_STICK1" ]; then
+    _rsync ${rsync_arguments_restore} ${BACKUP_STICK1}/B $HOME_DIR
+  fi
+  # create symbolic links for .local/bin
+  #post_restore_script
+}
+
+if [ -v restore ]; then
+	restore_home
+else
+	[[ -n "$all" ]] || [[ -n "$home" ]]   && backup_home
+	[[ -n "$all" ]] || [[ -n "$docs" ]]   && backup_documents
+	[[ -n "$all" ]] || [[ -n "$stick" ]]  && stick_to_stick
+	[[ -n "$all" ]] || [[ -n "$videos" ]] && backup_movies
+	[[ -n "$all" ]] || [[ -n "$music" ]]  && backup_music
+	[[ -n "$all" ]] || [[ -n "$books" ]]  && backup_books
+
+fi
