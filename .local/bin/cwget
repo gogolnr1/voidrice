@@ -1,15 +1,82 @@
 #!/bin/bash
 
-wget_url=$(xclip -selection clipboard -o -print0)
+# using eval in this script, this setting renders is way less evil
+set -e
 
-continueit () {
-	echo "[o]verwite or [c]ontinue?"
+cd $(dirname "$1")
+filename=$(basename "$1")
+
+
+overwrite () {
+	echo "[o]verwite or [c]ontinue? -- not nothing to exit"
 	read ANSWER
 	case $ANSWER in
-		[o]) rm $1 && false ;;
-		[c]) true ;;
-		*) exit 1 ;;
+		[o])
+			rm "$filename"
+			printf "$1 removed\n\n"
+		;;
+		[c])
+			continue=1
+			printf "continueing $1\n\n"
+		;;
+		*) exit 0 ;;
 	esac
 }
 
-[ -f "$1" ] && continueit $1 && wget -c "$wget_url" -O "$1" || wget "$wget_url" -O "$1"
+# get current clipboard content as downlaod source
+get_url=$(xclip -selection clipboard -o -print0)
+
+# determine which tool to use
+case $get_url in
+	*".m3u8") ytbts=1 ;;
+	"curl "*) crl=1 ;;
+	"http"* ) wgt=1 ;;
+	*       )
+		#ytb=1
+		echo "Clipboard content has no valid download pattern. Exiting."
+		exit 0
+	;;
+esac
+
+# if first parameter is empty simply use youtube-dl and exit
+[[ -z "$filename" ]] && youtube-dl $get_url && exit 0
+# else
+# if file exists ask to continue or to overwrite file
+[[ -f "$filename" ]] && overwrite "$1"
+
+# use youtube-dl
+[[ -n $ytbts ]] && youtube-dl --hls-use-mpegts $get_url -o "$filename"
+[[ -n $ytb ]]   && youtube-dl                  $get_url -o "$filename"
+[[ -n $ytbu ]]  && youtube-dl                  $get_url
+
+# use curl
+[[ -n $crl ]] && (
+	get_url=${get_url#curl }
+	[[ -n $continue ]] && wget_parms="-c"
+	eval "wget -T 5 $wget_parms \
+		$(echo "$get_url" | sed -e 's/-H/--header/g') \
+		-O \"$filename\""
+	exit 0
+
+	## unused
+	while true ; do
+		[[ -f "$filename" ]] && wget_parms="-c"
+		wget -T 5 $wget_parms \
+			$(echo "$get_url" | sed -e 's/-H/--header/g') \
+			-O "$filename" && break
+	done
+	exit 0
+
+	## unused
+	[[ -n $continue ]] && curl_parms="-C -"
+	eval "curl $curl_parms $get_url -o '$filename'"
+)
+
+# use wget
+[[ -n $wgt ]] && (
+	[[ -n $continue ]] && wget_parms="-c"
+	while true ; do
+		[[ -f "$filename" ]] && wget_parms="-c"
+		wget -T 5 $wget_parms "$get_url" -O "$filename" && break;
+	done
+)

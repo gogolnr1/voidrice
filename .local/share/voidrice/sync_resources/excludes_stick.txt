@@ -1,0 +1,6 @@
+.Trash-*
+/Movies
+/G
+/prjx
+/System Volume Information
+/lost+found

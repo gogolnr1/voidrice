@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# list food journal in json
+# parse result with jq and filter for title
+# sed result to remove leading and trailing quotes
+show_entries () {
+  jrnl food --format json | \
+    jq '.entries |=sort_by(.title) | .entries[] | "[\(.date) \(.time)] \(.title)"' | \
+    sed 's/^"//;s/"$//'
+}
+
+# extract date/time from fuzie-found jrnl entry
+extract_date_from_selected_entry () {
+  show_entries | fzf | sed 's/^\[//;s/\].*//'
+}
+
+# if first parameter exists and equals "e" or "d"
+# then extract date/time from fuzie-found jrnl entry
+# and execute jrnl edit/delete command based on date/time
+# and exit program
+if [[ -n "$1" ]]; then
+  case $1 in
+    e)
+      jrnl food -on "$(extract_date_from_selected_entry)" --edit
+      exit 1
+      ;;
+    d)
+      jrnl food -on "$(extract_date_from_selected_entry)" --delete
+      exit 1
+      ;;
+    *)
+      # never going to happen
+  esac
+fi
+
+# else
+# if parameter count greater that zero,
+# then add jrnl entry to food journal,
+# then exit program
+[[ $# > 0 ]] && \
+  jrnl food $@ && \
+  exit 1
+
+# else
+# just show entries
+show_entries | fzf

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo $(xclip -selection clipboard -o -print0) >> .local/share/larbs/mdNotes/"$*"

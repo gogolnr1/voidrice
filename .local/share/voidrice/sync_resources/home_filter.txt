@@ -1,0 +1,29 @@
++ .config/
++ .config/.Xmodmap
+
++ .config/BraveSoftware/
++ .config/BraveSoftware/Brave-Browser/
++ .config/BraveSoftware/Brave-Browser/Default/***
+
++ .config/yandex-disk/***
++ .config/jrnl/***
++ .config/tmux/***
++ .config/mdless/***
++ .config/dnote/***
++ .config/ssh/***
+
++ .local/
++ .local/bin/***
+
++ .local/share/
++ .local/share/jrnl/***
++ .local/share/dnote/***
++ .local/share/notes/***
++ .local/share/voidrice/***
++ .local/share/larbs/
++ .local/share/larbs/snippets
+
+- .vscode/**
++ .ssh
+
+- *

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+readonly CMD=$0
+shift
+[[ $CMD == "mv" ]] || [[ $CMD == "cp" ]] && (
+	`/usr/bin/$CMD -iv $@`
+	ls -la
+)
