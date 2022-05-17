@@ -1,5 +1,9 @@
 #!/bin/sh
 
+#xrandr --dpi 141
+xrandr --setprovideroutputsource modesetting NVIDIA-0
+xrandr --auto
+
 # xinitrc runs automatically when you run startx.
 
 # There are some small but important commands that need to be run when we start
