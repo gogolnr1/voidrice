@@ -9,7 +9,7 @@ readonly MUSIC_DIR="/run/mount/41G-PART/Musik"
 readonly BACKUP_STICK1="/run/mount/usb/32G-SANDISK"
 readonly BACKUP_STICK2="/run/mount/usb/16G-VERBATIM"
 
-readonly BACKUP_DATA1="/run/mount/41G-PART" #50GB-PART
+#readonly BACKUP_DATA1="/run/mount/41G-PART" #50GB-PART
 readonly BACKUP_DATA2="/run/mount/usb/800G-GRAUGEAR" #1TB-GRAYGEAR
 
 # check options
@@ -19,7 +19,7 @@ do
         restore) restore=1
             ;;
         hot) hot=1 ;;
-        -d|--docs) docs=1 ;;
+        -d|--documents) docs=1 ;;
         -b|--books) books=1 ;;
         -m|--music) music=1 ;;
         -v|--videos) videos=1 ;;
@@ -140,9 +140,20 @@ backup_books () {
 
 restore_home () {
   printf "\nrestore:\n"
-  if [ -d "$BACKUP_STICK1" ]; then
-    _rsync ${rsync_arguments_restore} ${BACKUP_STICK1}/B $HOME_DIR
+
+  if [ -d ".config/BraveSoftware/Brave-Browser" ]: then echo ".mozilla exists, skip..."; else
+	  if [ -d "$BACKUP_DISK2/Volatile/.config" ]; then
+		cp -r "$BACKUP_DISK2/Volatile/.mozilla" $HOME_DIR
+	  fi
   fi
+  if [ -d ".mozilla" ]: then echo ".mozilla exists, skip..."; else
+	  if [ -d "$BACKUP_DISK2/Volatile/.mozilla" ]; then
+		cp -r "$BACKUP_DISK2/Volatile/.mozilla" $HOME_DIR
+	  fi
+  fi
+  #if [ -d "$BACKUP_STICK1" ]; then
+  #  _rsync ${rsync_arguments_restore} ${BACKUP_STICK1}/B $HOME_DIR
+  #fi
   # create symbolic links for .local/bin
   #post_restore_script
 }

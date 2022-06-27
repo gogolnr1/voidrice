@@ -8,7 +8,7 @@ filename=$(basename "$1")
 
 
 overwrite () {
-	echo "[o]verwite or [c]ontinue? -- not nothing to exit"
+	echo "[o]verwite or [c]ontinue? -- nothing to exit"
 	read ANSWER
 	case $ANSWER in
 		[o])
@@ -45,9 +45,9 @@ esac
 [[ -f "$filename" ]] && overwrite "$1"
 
 # use youtube-dl
-[[ -n $ytbts ]] && youtube-dl --hls-use-mpegts $get_url -o "$filename"
-[[ -n $ytb ]]   && youtube-dl                  $get_url -o "$filename"
-[[ -n $ytbu ]]  && youtube-dl                  $get_url
+[[ -n $ytbts ]] && yt-dlp --hls-use-mpegts $get_url -o "$filename"
+[[ -n $ytb ]]   && yt-dlp                  $get_url -o "$filename"
+[[ -n $ytbu ]]  && yt-dlp                  $get_url
 
 # use curl
 [[ -n $crl ]] && (
