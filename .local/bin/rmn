@@ -1,14 +1,13 @@
 #!/bin/bash
 src_file="$(which lsn)"
 source "$src_file"
-source "$(dirname $src_file)/.colors"
+source "$HOME/.config/shell/rc.d/00_colors"
 
 count=${#lines[@]}
-re='^[0-9]+$'
-if [[ $1 =~ $re ]] && (($1 >= 1 && $1 < $count)); then
-	file="${lines_nc[(($1-1))]}"
-	q=$(printf "${BIRed}${file}${NC}")
-	[[ -d "$file" ]] && p="folder " && r="r"
+if [[ $1 =~ $re ]] && (($1 >= 1 && $1 <= $count)); then
+	dest="${lines_nc[(($1-1))]}"
+	q=$(printf "${BIRed}${dest}${NC}")
+	[[ -d "$dest" ]] && p="folder " && r="r"
 	read -p "Remove $p$q? (j/N): " del
-	[[ $del =~ j|y ]] && rm -${r}v "$file"
+	[[ $del =~ j|y ]] && rm -${r}v "$dest"
 fi
