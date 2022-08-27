@@ -1,4 +1,13 @@
 #!/bin/bash
 
-sudo rstudio-bin
-#rstudio-bin --no-sandbox
+sudo docker-compose -f .local/repos/docker-rstudio-server/docker-compose.yml up &
+brave --new-window "http://127.0.0.1:8787/"
+#sudo rstudio-bin
+exit 0
+
+while true;
+do
+	window_name=$(wmctrl -l | awk '{$1=$2=$3=""; print $0}' | grep "RStudio Server")
+	[ -z "$window_name" ] && echo "exiting..." && sudo docker stop "rsudio-server" && exit 0
+	sleep 5
+done
