@@ -4,11 +4,9 @@
 set -e
 
 cd $(dirname "$1")
-filename=$(basename "$1")
-
 
 overwrite () {
-	echo "[o]verwite or [c]ontinue? -- nothing to exit"
+	echo "[o]verwite or [c]ontinue $1? -- nothing to exit"
 	read ANSWER
 	case $ANSWER in
 		[o])
@@ -26,57 +24,52 @@ overwrite () {
 # get current clipboard content as downlaod source
 get_url=$(xclip -selection clipboard -o -print0)
 
+#echo "$get_url" | grep -oP 'http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)'
+
 # determine which tool to use
 case $get_url in
 	*".m3u8") ytbts=1 ;;
+	*"youtu"*) ytbts=1 && ytbraw=1 ;;
 	"curl "*) crl=1 ;;
 	"http"* ) wgt=1 ;;
 	*       )
-		#ytb=1
 		echo "Clipboard content has no valid download pattern. Exiting."
 		exit 0
 	;;
 esac
 
-# if first parameter is empty simply use youtube-dl and exit
-[[ -z "$filename" ]] && youtube-dl $get_url && exit 0
-# else
+# try to guess filename from 2nd last entry of clipboard history using greenclip
+if [[ -z "$1" ]]
+then
+  [[ -z "$ytbraw" ]] && command -v greenclip &> /dev/null &&
+    filename="$(greenclip print | sed -n 2p).mp4"
+else
+  filename=$(basename "$1")
+fi
+
+# if filename not given just use yt-dlp and exit
+[[ -z "$filename" ]] && yt-dlp "$get_url"
+
 # if file exists ask to continue or to overwrite file
-[[ -f "$filename" ]] && overwrite "$1"
+[[ -f "$filename" ]] && overwrite "$filename"
 
 # use youtube-dl
-[[ -n $ytbts ]] && yt-dlp --hls-use-mpegts $get_url -o "$filename"
-[[ -n $ytb ]]   && yt-dlp                  $get_url -o "$filename"
-[[ -n $ytbu ]]  && yt-dlp                  $get_url
+[[ -n $ytbts ]] && yt-dlp --hls-use-mpegts "$get_url" -o "$filename"
 
-# use curl
-[[ -n $crl ]] && (
-	get_url=${get_url#curl }
-	[[ -n $continue ]] && wget_parms="-c"
-	eval "wget -T 5 $wget_parms \
-		$(echo "$get_url" | sed -e 's/-H/--header/g') \
-		-O \"$filename\""
-	exit 0
+[[ -n $ffmpeg ]] && \
+  cat $get_url | ffmpeg -protocol_whitelist file,http,https,tcp,tls -allowed_extensions ALL -i - -bsf:a aac_adtstoasc -c copy "$filename"
 
-	## unused
-	while true ; do
-		[[ -f "$filename" ]] && wget_parms="-c"
-		wget -T 5 $wget_parms \
-			$(echo "$get_url" | sed -e 's/-H/--header/g') \
-			-O "$filename" && break
-	done
-	exit 0
-
-	## unused
-	[[ -n $continue ]] && curl_parms="-C -"
-	eval "curl $curl_parms $get_url -o '$filename'"
-)
+# use curl (actually translating to wget again)
+if [[ -n $crl ]] ; then
+	get_url=$(echo ${get_url#curl } | sed -e 's/-H/--header/g')
+  wgt=1
+fi
 
 # use wget
-[[ -n $wgt ]] && (
+if [[ -n $wgt ]] ; then
 	[[ -n $continue ]] && wget_parms="-c"
 	while true ; do
 		[[ -f "$filename" ]] && wget_parms="-c"
-		wget -T 5 $wget_parms "$get_url" -O "$filename" && break;
+		eval "wget -T 5 $wget_parms $get_url -O '$filename' && break;"
 	done
-)
+fi

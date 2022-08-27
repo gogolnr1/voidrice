@@ -1,6 +1,6 @@
 Xft.dpi:        180
 XTerm.*.faceName: DejaVu Sans Mono
-XTerm.*.faceSize: 14.0
+#XTerm.*.faceSize: 14.0
 
 ! you have to set Xcursor.theme otherwise xterm overrides all other
 ! Xcursor settings

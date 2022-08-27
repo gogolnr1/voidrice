@@ -2,7 +2,7 @@
 # Control screen brightness
 # --------------------------
 
-bfl=/sys/class/backlight/radeon_bl0
+bfl=/sys/class/backlight/intel_backlight
 [[ $(stat -L -c "%a" ${bfl}/brightness) -ne 666 ]] &&
     sudo chmod 666 ${bfl}/brightness
 
