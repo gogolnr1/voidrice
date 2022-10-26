@@ -129,11 +129,12 @@ backup_movies () {
 backup_books () {
   printf "\nbooks:\n"
   local book_dirname="Calibre Library"
-  if [ -d "$HOME_DIR/$book_dirname" ] && [ -d "$BACKUP_DATA1" ]; then
-    _rsync ${rsync_arguments_media} "$HOME_DIR/$book_dirname" "$BACKUP_DATA1/"
-
+  if [ -d "$HOME_DIR/$book_dirname" ]; then
+    if [ -d "$BACKUP_DATA1" ]; then
+      _rsync ${rsync_arguments_media} "$HOME_DIR/$book_dirname" "$BACKUP_DATA1/"
+    fi
     if [ -d "$BACKUP_DATA2" ]; then
-      _rsync ${rsync_arguments_media} "$BACKUP_DATA1/$book_dirname" "$BACKUP_DATA2/"
+      _rsync ${rsync_arguments_media} "$HOME_DIR/$book_dirname" "$BACKUP_DATA2/"
     fi
   fi
 }
@@ -141,12 +142,12 @@ backup_books () {
 restore_home () {
   printf "\nrestore:\n"
 
-  if [ -d ".config/BraveSoftware/Brave-Browser" ]: then echo ".mozilla exists, skip..."; else
+  if [ -d ".config/BraveSoftware/Brave-Browser" ]; then echo ".mozilla exists, skip..."; else
 	  if [ -d "$BACKUP_DISK2/Volatile/.config" ]; then
 		cp -r "$BACKUP_DISK2/Volatile/.mozilla" $HOME_DIR
 	  fi
   fi
-  if [ -d ".mozilla" ]: then echo ".mozilla exists, skip..."; else
+  if [ -d ".mozilla" ]; then echo ".mozilla exists, skip..."; else
 	  if [ -d "$BACKUP_DISK2/Volatile/.mozilla" ]; then
 		cp -r "$BACKUP_DISK2/Volatile/.mozilla" $HOME_DIR
 	  fi

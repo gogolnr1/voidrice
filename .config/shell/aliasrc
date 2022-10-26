@@ -21,6 +21,7 @@ alias \
 	bc="bc -ql" \
 	mkd="mkdir -pv" \
 	yt="yt-dlp --embed-metadata -i" \
+	yts="yt --write-subs --sub-langs 'en,de'" \
 	yta="yt -x -f bestaudio/best" \
 	ffmpeg="ffmpeg -hide_banner"
 
@@ -45,7 +46,7 @@ alias \
 	p="pacman" \
 	xi="sudo xbps-install" \
 	xr="sudo xbps-remove -R" \
-	xq="xbps-query" \
+	xxq="xbps-query" \
 	x="xdg-open"
 
 alias \
