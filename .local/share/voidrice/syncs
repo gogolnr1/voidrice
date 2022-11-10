@@ -12,6 +12,8 @@ readonly BACKUP_STICK2="/run/mount/usb/16G-VERBATIM"
 #readonly BACKUP_DATA1="/run/mount/41G-PART" #50GB-PART
 readonly BACKUP_DATA2="/run/mount/usb/800G-GRAUGEAR" #1TB-GRAYGEAR
 
+readonly BACKUP_MTP1="/run/mount/mtp/nova-air"
+
 # check options
 while test $# -gt 0
 do
@@ -24,6 +26,7 @@ do
         -m|--music) music=1 ;;
         -v|--videos) videos=1 ;;
         -h|--home) home=1 ;;
+        -n|--nova) nova=1 ;;
         *) echo "argument $1" ;;
     esac
     shift
@@ -159,6 +162,21 @@ restore_home () {
   #post_restore_script
 }
 
+backup_nova () {
+  printf "\nnova:\n"
+  if [ ! -d "$BACKUP_MTP1/Internal shared storage" ]; then
+    printf "\nmounting MTP...\n"
+    jmtpfs $BACKUP_MTP1
+  fi
+  if [ -d "$BACKUP_MTP1/Internal shared storage" ]; then
+    if [ -d "$HOME_DIR/Documents/nova" ]; then
+      _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/Pictures" ${HOME_DIR}/Documents/nova
+      _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/Movies" ${HOME_DIR}/Documents/nova
+    fi
+  fi
+  umount $BACKUP_MTP1
+}
+
 if [ -v restore ]; then
 	restore_home
 else
@@ -168,5 +186,6 @@ else
 	[[ -n "$all" ]] || [[ -n "$videos" ]] && backup_movies
 	[[ -n "$all" ]] || [[ -n "$music" ]]  && backup_music
 	[[ -n "$all" ]] || [[ -n "$books" ]]  && backup_books
+	[[ -n "$all" ]] || [[ -n "$nova" ]]  && backup_nova
 
 fi
