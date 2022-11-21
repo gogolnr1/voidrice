@@ -1,5 +1,6 @@
 #!/bin/bash
 
+shopt -s dotglob # includes dotfiles and -dirs
 readonly CMD=$0
 shift
 [[ $CMD == "mv" ]] || [[ $CMD == "cp" ]] && (
