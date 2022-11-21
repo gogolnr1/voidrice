@@ -1,21 +1,28 @@
 #!/bin/bash
 
+source "$HOME/.config/shell/rc.d/00_colors"
+
 # using eval in this script, this setting renders is way less evil
 set -e
 
 cd $(dirname "$1")
 
+colorize () {
+  printf "${BIRed}$1${NC}"
+}
+
 overwrite () {
-	echo "[o]verwite or [c]ontinue $1? -- nothing to exit"
+  local f=$(colorize "$1")
+	echo "[o]verwite or [c]ontinue $f? -- nothing to exit"
 	read ANSWER
 	case $ANSWER in
 		[o])
 			rm "$filename"
-			printf "$1 removed\n\n"
+			printf "$f removed\n\n"
 		;;
 		[c])
 			continue=1
-			printf "continueing $1\n\n"
+			printf "continueing $f\n\n"
 		;;
 		*) exit 0 ;;
 	esac
@@ -44,7 +51,10 @@ then
   [[ -z "$ytbraw" ]] && command -v greenclip &> /dev/null &&
     filename="$(greenclip print | sed -n 2p).mp4"
 else
-  filename=$(basename "$1")
+  filename=$(basename -- "$1")
+  # if filename not empty & without file extension
+  [ -n "${filename}" ] && [ "$filename" == "${filename##*.}" ] && 
+    filename="$filename.mp4"
 fi
 
 # if filename not given just use yt-dlp and exit
