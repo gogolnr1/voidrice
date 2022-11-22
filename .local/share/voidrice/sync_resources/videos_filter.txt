@@ -1,5 +1,6 @@
 + /Clips/***
 + /Movies/***
 + /Series/***
++ /Music/***
 
 - *
