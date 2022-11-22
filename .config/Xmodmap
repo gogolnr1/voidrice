@@ -1,0 +1,4 @@
+clear Lock
+keycode  61 = slash underscore slash underscore endash emdash endash
+keycode  16 = 7 minus 7 minus braceleft seveneighths braceleft
+
