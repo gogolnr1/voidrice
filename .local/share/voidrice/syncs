@@ -118,14 +118,18 @@ backup_movies () {
   printf "\nmovies:\n"
   local videos_filter="${HOME_DIR}/.local/share/voidrice/sync_resources/videos_filter.txt"
   if [ -d "$HOME_DIR/Videos" ]; then
-    if [ -d "$BACKUP_DATA2" ]; then
-      _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA2}/Videos
-    elif [ -d "$BACKUP_DATA1" ]; then
-      _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA1}/Videos
+    [ -d "$BACKUP_DATA2" ] && local backupdir=${BACKUP_DATA2}
+      #_rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA2}/Videos
+    [ -d "$BACKUP_DATA1" ] && local backupdir=${BACKUP_DATA1}
+      #_rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA1}/Videos
 
-      # delete files in root (source & dest) which exist in subfolders (of dest after first rsync)
-      # then sync root for unsorted videos
-      #_rsync ${rsync_arguments_media} ${HOME_DIR}/Videos ${BACKUP_DATA1}/
+    if [ -n $backupdir ]; then
+      _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${backupdir}/Videos
+
+      read -p 'Clear Movies? ' clearm
+      if [[ $clearm == "y" ]]; then
+        _rsync ${rsync_arguments_media} --delete --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/Movies ${backupdir}/Videos/Movies
+      fi
     fi
   fi
 }
