@@ -11,6 +11,7 @@ remaps & 		# run the remaps script, switching caps/esc and more; check it for mo
 greenclip daemon &
 setxkbmap 'de' && setxkbmap -option kpdl:dot # comma to dot
 #xmodmap ${XDG_CONFIG_HOME:-$HOME/.config}/.Xmodmap
+[ -s ~/.config/Xmodmap ] && xmodmap ~/.config/Xmodmap
 
 autostart="mpd xcompmgr dunst unclutter pipewire"
 
@@ -19,4 +20,4 @@ for program in $autostart; do
 done >/dev/null 2>&1
 
 # Ensure that xrdb has finished running before moving on to start the WM/DE.
-[ -n "$xrdbpid" ] && wait "$xrdbpid"
+#[ -n "$xrdbpid" ] && wait "$xrdbpid"
