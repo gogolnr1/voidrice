@@ -1,4 +1,8 @@
+! to list all keycodes enter command: xmodmap -pke
+
+!keycode  51 = numbersign apostrophe numbersign apostrophe rightsinglequotemark dead_breve rightsinglequotemark dead_breve numbersign apostrophe rightsinglequotemark dead_breve
+
 clear Lock
-keycode  61 = slash underscore slash underscore endash emdash endash
-keycode  16 = 7 minus 7 minus braceleft seveneighths braceleft
+keycode  51 = slash apostrophe slash apostrophe numbersign dead_breve numbersign dead_breve slash apostrophe numbersign dead_breve
+
 
