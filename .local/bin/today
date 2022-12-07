@@ -1,0 +1,9 @@
+#!/bin/bash
+
+now=$(date +"%Y-%m-%d");
+if ([[ -z $1 ]]); then
+	nvim "$KB_DIRECTORY/main/Notes/Daily/$now.md"
+else
+	echo $"- $@" >> "$KB_DIRECTORY/main/Notes/Daily/$now.md"
+
+fi
