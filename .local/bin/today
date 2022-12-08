@@ -1,9 +1,44 @@
 #!/bin/bash
 
-now=$(date +"%Y-%m-%d");
-if ([[ -z $1 ]]); then
-	nvim "$KB_DIRECTORY/main/Notes/Daily/$now.md"
-else
-	echo $"- $@" >> "$KB_DIRECTORY/main/Notes/Daily/$now.md"
+# make notes to obsidian with dmenu support and image recognition for clipboard content
+# dependencies: xclip notify-send
 
+daily_path="$KB_DIRECTORY/main/Notes/Daily"
+attachments_folder="_attachments"
+
+# terminal or system call?
+[ -t 1 ] && [ "$TERM" != 'linux' ] && \
+	terminal=true
+
+# use arguments or dmenu prompt for note content?
+[ -n "$terminal" ] && \
+	content="$@" || \
+	content=$(dmenu < /dev/null)
+
+now=$(date +"%Y-%m-%d");
+
+# if clipboard content has image information then write it to attachments folder
+# and clear clipboard from image content for not to be used again in the next note
+if [ -n "$content" ]; then
+	xclip -selection clipboard -t TARGETS -o | grep -q "image/png" && \
+		imagename="$attachments_folder/$now $content.png" && \
+		xclip -selection clipboard -t image/png -o > "$daily_path/$imagename" && \
+		xclip -selection clipboard < /dev/null && \
+		hasimage=true
+fi
+
+if [ -z "$content" ]; then
+	nvim "$daily_path/$now.md"
+else
+	echo $"- $content" >> "$daily_path/$now.md" && \
+		finish=true
+
+	[ -n "$hasimage" ] && \
+		echo "![[$imagename]]" >> "$daily_path/$now.md"
+
+	if [ -n "$finish" ]; then
+		msg="Notes entry made"
+		[ -n "$terminal" ] && \
+			echo "$msg" || notify-send "$msg"
+	fi
 fi
