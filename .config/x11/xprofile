@@ -10,8 +10,7 @@ xrdb ${XDG_CONFIG_HOME:-$HOME/.config}/x11/xresources & xrdbpid=$!	# Uncomment t
 remaps & 		# run the remaps script, switching caps/esc and more; check it for more info
 greenclip daemon &
 setxkbmap 'de' && setxkbmap -option kpdl:dot # comma to dot
-#xmodmap ${XDG_CONFIG_HOME:-$HOME/.config}/.Xmodmap
-[ -s ~/.config/Xmodmap ] && xmodmap ~/.config/Xmodmap
+xmodmap ${XDG_CONFIG_HOME:-$HOME/.config}/Xmodmap
 
 autostart="mpd xcompmgr dunst unclutter pipewire"
 
