@@ -12,12 +12,15 @@ for command in mount umount sv pacman updatedb su shutdown poweroff reboot ; do
 done; unset command
 
 mkd() { mkdir -pv "$@" && cd "$@"; }
+nv() { cd "$(nova-air)" }
+rmo() { rmn "$@" }
 
 # Verbosity and settings that you pretty much just always are going to want.
+#rm="rm -vI" \
 alias \
 	cp="cp -iv" \
 	mv="mv -iv" \
-	rm="rm -vI" \
+	rm="rmo" \
 	bc="bc -ql" \
 	mkd="mkdir -pv" \
 	yt="yt-dlp --embed-metadata -i" \

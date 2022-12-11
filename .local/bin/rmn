@@ -1,13 +1,55 @@
 #!/bin/bash
+
+[ -n "$1" ] || exit 1
+
 src_file="$(which lsn)"
 source "$src_file"
 source "$HOME/.config/shell/rc.d/00_colors"
 
+internal_storage="Internal shared storage"
 count=${#lines[@]}
-if [[ $1 =~ $re ]] && (($1 >= 1 && $1 <= $count)); then
+
+# if current dir is Nova backup dir and device is mounted, then ask for deletion on device
+# else perform normal rm 
+rmx() {
+	mountpoint -q "$NOVA_MOUNT" && \
+	[[ -d $NOVA_MOUNT/$internal_storage ]] && \
+		mounted=true
+
+	# if current directory is subfolder of nova sync destination
+	# and is mounted, then set delete flag
+	if [[ $PWD = $NOVA_DOCS/* ]] && [[ -n $mounted ]]; then
+		read -p 'Delete on Nova-Air device? (y/N) ' delete
+		[[ $delete =~ j|y ]] && delete=true
+	fi
+
+	# delete locally and if successful, then 
+	# jump into remote dir
+	# and delete remotely
+	rm -v "$@" && [[ -n $delete ]] && \
+		cd "${PWD//$NOVA_DOCS/$NOVA_MOUNT/$internal_storage}" && \
+		rm -v "$@"
+}
+
+if [[ ! -d $1 ]] && 
+   [[ $1 =~ $re ]] && 
+   (($1 >= 1 && $1 <= $count)); then 
+   	echo "whut?"
+fi
+
+# if argument is not directory
+# and argument is number
+# and numer is in rage, then delete by number
+if [[ ! -d $1 ]] && 
+   [[ $1 =~ $re ]] && 
+   (("$1" >= 1 && "$1" <= $count)); then 
 	dest="${lines_nc[(($1-1))]}"
 	q=$(printf "${BIRed}${dest}${NC}")
 	[[ -d "$dest" ]] && p="folder " && r="r"
-	read -p "Remove $p$q? (j/N): " del
-	[[ $del =~ j|y ]] && rm -${r}v "$dest"
+	read -p "Remove $p$q? (y/N) " del
+	[[ $del =~ j|y ]] && rmx -${r} "$dest"
+	exit 0
 fi
+
+rmx -I "$@"
+
