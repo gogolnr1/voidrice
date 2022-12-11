@@ -178,6 +178,7 @@ backup_nova () {
       _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/Pictures" ${HOME_DIR}/Documents/nova
       _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/Screenshots" ${HOME_DIR}/Documents/nova
       _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/Movies" ${HOME_DIR}/Documents/nova
+      _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/note" ${HOME_DIR}/Documents/nova
     fi
   fi
   umount $BACKUP_MTP1
