@@ -1,53 +1,77 @@
 #!/bin/bash
 
-[ -n "$1" ] || exit 1
+# if no parameter is set, forward to rm for its own error message
+if [[ -z $@ ]]; do rm $@; exit 1; done
 
 src_file="$(which lsn)"
 source "$src_file"
 source "$HOME/.config/shell/rc.d/00_colors"
 
-internal_storage="Internal shared storage"
+shared_storage="Internal shared storage"
 count=${#lines[@]}
 
 # if current dir is Nova backup dir and device is mounted, then ask for deletion on device
 # else perform normal rm 
 rmx() {
-	mountpoint -q "$NOVA_MOUNT" && \
-	[[ -d $NOVA_MOUNT/$internal_storage ]] && \
-		mounted=true
+	# baaad practice. files to be deleted have to be checked if in NOVA_DOCS and not pwd from bash
+	# read $@ line; do [[ $(base $line) == "$NOVA_DOCS"* ]] && is_nova_dir=true; done
+	[[ $PWD = $NOVA_DOCS/* ]] && is_nova_dir=true
+
+	# remember subfolders of DOCS
+	# $nova_file_list=$(ls $@ | grep $NOVA_DOCS | perl -pi -e "s/$NOVA_DOCS\///g")
+
+	# if nova not mounted then ask to mount
+	[[ -n $is_nova_dir ]] && 
+	while [[ -z $check ]]; do
+		if $(mountpoint -q "$NOVA_MOUNT") &&
+		[[ -d $NOVA_MOUNT/$shared_storage ]]; then
+			printf "${BIGreen}Found remote device${NC}\n"
+			mounted=true
+			check=true
+		else
+			if [[ -z $skip ]]; then
+				printf "Files to be synced:\n"
+				printf "$nova_file_list\n"
+				printf "Sync device is not mounted here: $NOVA_MOUNT.\n"
+				printf "Connect now or continue without remote deletion. "
+				read -p "Enter nothing to continue or anything else to retry. " any
+				[[ -z $any ]] && skip=true
+			else
+				check=true
+			fi
+		fi
+	done
 
 	# if current directory is subfolder of nova sync destination
 	# and is mounted, then set delete flag
-	if [[ $PWD = $NOVA_DOCS/* ]] && [[ -n $mounted ]]; then
-		read -p 'Delete on Nova-Air device? (y/N) ' delete
+	if [[ -n $is_nova_dir ]] && [[ -n $mounted ]]; then
+		echo "$nova_file_list"
+		read -p "Delete remote? (y/N) " delete
 		[[ $delete =~ j|y ]] && delete=true
 	fi
 
-	# delete locally and if successful, then 
-	# jump into remote dir
+	# delete locally and if successful
+	# then jump into remote dir
 	# and delete remotely
 	rm -v "$@" && [[ -n $delete ]] && \
-		cd "${PWD//$NOVA_DOCS/$NOVA_MOUNT/$internal_storage}" && \
+		# baaad practice as above don't take PWD. 
+		# cd $NOVA_MOUNT && rm $nova_file_list
+		# jump into MOUNT/shared_storage and rm to subfolders
+		cd "${PWD//$NOVA_DOCS/$NOVA_MOUNT/$shared_storage}" && \
 		rm -v "$@"
 }
-
-if [[ ! -d $1 ]] && 
-   [[ $1 =~ $re ]] && 
-   (($1 >= 1 && $1 <= $count)); then 
-   	echo "whut?"
-fi
 
 # if argument is not directory
 # and argument is number
 # and numer is in rage, then delete by number
 if [[ ! -d $1 ]] && 
-   [[ $1 =~ $re ]] && 
+   [[ "$1" =~ ^[0-9]+$ ]] && 
    (("$1" >= 1 && "$1" <= $count)); then 
 	dest="${lines_nc[(($1-1))]}"
 	q=$(printf "${BIRed}${dest}${NC}")
-	[[ -d "$dest" ]] && p="folder " && r="r"
+	[[ -d "$dest" ]] && p="folder " && r="-r"
 	read -p "Remove $p$q? (y/N) " del
-	[[ $del =~ j|y ]] && rmx -${r} "$dest"
+	[[ $del =~ j|y ]] && rmx ${r} "$dest"
 	exit 0
 fi
 
