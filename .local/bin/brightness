@@ -4,11 +4,12 @@
 
 bfl=/sys/class/backlight/intel_backlight
 [[ $(stat -L -c "%a" ${bfl}/brightness) -ne 666 ]] &&
-    sudo chmod 666 ${bfl}/brightness
+    chmod 666 ${bfl}/brightness
+    #sudo chmod 666 ${bfl}/brightness
 
 # Steps for raising/lowering brightness
-STEP=5
-BIG_STEP=25
+STEP=100
+BIG_STEP=250
 
 current_brightness_value=$(cat ${bfl}/brightness)
 max_brightness_value=$(cat ${bfl}/max_brightness)

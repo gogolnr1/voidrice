@@ -1,6 +1,12 @@
-Xft.dpi:        180
-XTerm.*.faceName: DejaVu Sans Mono
+Xft.autohint: 0
+Xft.lcdfilter:  lcddefault
+Xft.hintstyle:  hintfull
+Xft.hinting: 1
+Xft.antialias: 1
+Xft.rgba: rgb
 #XTerm.*.faceSize: 14.0
+
+XTerm.*.faceName: DejaVu Sans Mono
 
 ! you have to set Xcursor.theme otherwise xterm overrides all other
 ! Xcursor settings

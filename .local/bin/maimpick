@@ -7,11 +7,12 @@
 # variables
 output="$(date '+%y%m%d-%H%M-%S').png"
 xclip_cmd="xclip -sel clip -t image/png"
+tmp_file="/tmp/notes_images"
 
 case "$(printf "a selected area\\ncurrent window\\ncurrent window to notes\\nfull screen\\na selected area (copy)\\ncurrent window (copy)\\nfull screen (copy)" | dmenu -l 7 -i -p "Screenshot which area?")" in
     "a selected area") maim -s pic-selected-"${output}" ;;
     "current window") maim -q -d 0.2 -i "$(xdotool getactivewindow)" pic-window-"${output}" ;;
-    "current window to notes") maim -q -d 0.2 -i "$(xdotool getactivewindow)" /tmp/unsorted && unsorted ;;
+    "current window to notes") maim -q -d 0.2 -i "$(xdotool getactivewindow)" $tmp_file && note --unsorted --tmp "$tmp_file" ;;
     "full screen") maim -q -d 0.2 pic-full-"${output}" ;;
     "a selected area (copy)") maim -s | ${xclip_cmd} ;;
     "current window (copy)") maim -q -d 0.2 -i "$(xdotool getactivewindow)" | ${xclip_cmd} ;;

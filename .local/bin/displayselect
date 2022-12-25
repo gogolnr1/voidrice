@@ -30,11 +30,10 @@ twoscreen() { # If multi-monitor is selected and there are two screens.
             --output "$internal" --auto --same-as "$external" \
             --scale "$scale_x"x"$scale_y"
     else
-
         primary=$(echo "$screens" | dmenu -i -p "Select primary display:")
         secondary=$(echo "$screens" | grep -v "$primary")
         direction=$(printf "left\\nright" | dmenu -i -p "What side of $primary should $secondary be on?")
-        xrandr --output "$primary" --auto --scale 1.0x1.0 --output "$secondary" --"$direction"-of "$primary" --auto --scale 1.0x1.0
+        xrandr --output "$primary" --primary --auto --scale 1.0x1.0 --output "$secondary" --"$direction"-of "$primary" --auto --scale 1.0x1.0
     fi
     }
 
@@ -53,7 +52,11 @@ multimon() { # Multi-monitor handler.
 	esac ;}
 
 onescreen() { # If only one output available or chosen.
-	xrandr --output "$1" --auto --scale 1.0x1.0 $(echo "$allposs" | grep -v "\b$1" | awk '{print "--output", $1, "--off"}' | paste -sd ' ' -)
+	rotate=$(printf "normal\\nleft\\nright" | dmenu -i -p "Rotate direction:")
+
+	xrandr --output "$1" --primary --auto --scale 1.0x1.0 \
+		$([[ -n $rotate ]] && echo "--rotate $rotate") \
+		$(echo "$allposs" | grep -v "\b$1" | awk '{print "--output", $1, "--off"}' | paste -sd ' ' -)
 	}
 
 postrun() { # Stuff to run to clean up.
