@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 
+[[ -n $1 ]] && aid="$1" || aid="$(xclip -s c -o print0)"
+echo "$url"
+echo "opening..."
+xdg-open "https://archive.org/services/loans/loan/?action=media_url&identifier=$aid&format=pdf&redirect=1" > /dev/null 2>&1
+exit 0
+
 echo "url to enter in your browser when you are logged in to archive.org:"
-echo "https://archive.org/services/loans/loan/?action=media_url&identifier=$1&format=pdf&redirect=1"
+echo "$url"
 echo ""
 echo "Then go to the following git repo and download that amazing tool, which downloads the DRM file from Adobe and de-DRMs it:"
 echo "https://github.com/BentonEdmondson/knock"

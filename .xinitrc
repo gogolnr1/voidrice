@@ -1,2 +1,0 @@
-numlockx &
-exec openbox-session

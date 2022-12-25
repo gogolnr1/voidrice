@@ -7,13 +7,14 @@
 [ -f "$XINITRC" ] && alias startx="startx $XINITRC"
 
 # sudo not required for some system commands
-for command in mount umount sv pacman updatedb su shutdown poweroff reboot ; do
+for command in mount umount sv pacman updatedb su shutdown poweroff reboot brightness; do
 	alias $command="sudo $command"
 done; unset command
 
 mkd() { mkdir -pv "$@" && cd "$@"; }
 nv() { cd "$(nova-air)" }
 rmo() { rmn "$@" }
+cpstat() { time rsync -a --info=progress2 --stats $1 $2 }
 
 # Verbosity and settings that you pretty much just always are going to want.
 #rm="rm -vI" \
@@ -59,4 +60,8 @@ alias \
 	ref="shortcuts >/dev/null; source ${XDG_CONFIG_HOME:-$HOME/.config}/shell/shortcutrc ; source ${XDG_CONFIG_HOME:-$HOME/.config}/shell/zshnameddirrc" \
 	weath="less -S ${XDG_DATA_HOME:-$HOME/.local/share}/weatherreport" \
 	pbcopy="xclip -selection c" \
-	pbpaste="xclip -selection clipboard -o"
+	pbpaste="xclip -selection clipboard -o" \
+	unsorted="note --unsorted" \
+	daily="note --daily" \
+	mp="ncmpc --host=127.0.0.1 --port=6600"
+
