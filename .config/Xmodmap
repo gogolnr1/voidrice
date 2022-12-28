@@ -1,8 +1,9 @@
 ! to list all keycodes enter command: xmodmap -pke
 
+! original setting:
 !keycode  51 = numbersign apostrophe numbersign apostrophe rightsinglequotemark dead_breve rightsinglequotemark dead_breve numbersign apostrophe rightsinglequotemark dead_breve
 
 clear Lock
-keycode  51 = slash apostrophe slash apostrophe numbersign dead_breve numbersign dead_breve slash apostrophe numbersign dead_breve
+keycode  51 = numbersign apostrophe numbersign apostrophe slash dead_breve slash dead_breve numbersign apostrophe slash dead_breve
 
 

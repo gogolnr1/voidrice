@@ -7,11 +7,11 @@ export SUDO_ASKPASS="$HOME/.local/bin/dmenupass"
 # If you use startx/xinit like a Chad, this file will also be sourced.
 
 displayinit & xrdbpid=$!	# X related monitor settings (requires global SCREEN_DPI value)
-remaps & 		# run the remaps script, switching caps/esc and more; check it for more info
-greenclip daemon &
+remaps				# run the remaps script, switching caps/esc and more; check it for more info
 xmodmap ${XDG_CONFIG_HOME:-$HOME/.config}/Xmodmap
 
-setbg
+greenclip daemon &
+setbg &
 
 autostart="mpd xcompmgr dunst unclutter pipewire"
 
