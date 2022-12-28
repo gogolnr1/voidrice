@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# function to escape grep specific regex charecters
+ere_quote() {
+    sed 's/[][\.|$?+*^]/\\&/g' <<< "$*"
+}
+
 if [ "$1" = "clear" ] ; then
 	[ "$(printf "No\\nYes" | dmenu -i -p "Clear clipboard history?")" = "Yes" ] && \
 		pkill greenclip && greenclip clear && greenclip daemon
@@ -10,6 +15,7 @@ fi
 # Truncated demenu printout
 val=$(greenclip print | grep -E -o "^.{0,100}" - | dmenu -i -l 40 -p clipboard)
 
+echo $val
 # Aquiring full clipboard content of selection
 # sed filters first result, xargs preserves line breaks
-greenclip print | grep "^$val" | sed '1q;d' | xargs -r -d'\n' -I '{}' greenclip print '{}' 
+greenclip print | grep "^$(ere_quote $val)" | sed '1q;d' | xargs -r -d'\n' -I '{}' greenclip print '{}' 
