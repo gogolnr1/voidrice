@@ -1,21 +1,17 @@
 #!/usr/bin/env bash
+# todo: consider use copyq
 
-# function to escape grep specific regex charecters
-ere_quote() {
-    sed 's/[][\.|$?+*^]/\\&/g' <<< "$*"
-}
-
-if [ "$1" = "clear" ] ; then
-	[ "$(printf "No\\nYes" | dmenu -i -p "Clear clipboard history?")" = "Yes" ] && \
+if [[ $1 = clear ]] ; then
+	[[ $(printf "No\\nYes" | dmenu -i -p "Clear clipboard history?") = Yes ]] && \
 		pkill greenclip && greenclip clear && greenclip daemon
 
 	exit 0
 fi
 
-# Truncated demenu printout
-val=$(greenclip print | grep -E -o "^.{0,100}" - | dmenu -i -l 40 -p clipboard)
+# Truncated demenu printout with line numbers
+index=$(greenclip print | grep -E -on "^.{0,100}" - | dmenu -i -l 40 | sed 's/:.*//')
+[[ -z $index ]] && exit 0
 
-echo $val
 # Aquiring full clipboard content of selection
-# sed filters first result, xargs preserves line breaks
-greenclip print | grep "^$(ere_quote $val)" | sed '1q;d' | xargs -r -d'\n' -I '{}' greenclip print '{}' 
+# sed filters by line number, xargs preserves line breaks
+greenclip print | sed -n "$index p" | xargs -r -d'\n' -I '{}' greenclip print '{}' 

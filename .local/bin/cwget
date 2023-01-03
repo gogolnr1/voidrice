@@ -1,14 +1,37 @@
 #!/bin/bash
+# normal wget: wget "<url to download>" -o "<filename>"
+# this script: cwget "<filename>" <-- gets url via xclip
+#
+# features:
+# - take second entry from greenclip as possible filename
+# - use yt-dlp or wget depending on clipboard content
+# - asks to continue existing filename or overwrite
+# - can be called system keybindings and then asks for filename via dmenu prompt
+# - autocompletes with .mp4 if no suffix is given
+# - also accepts curl calls
+
+# if not executed from terminal ask for filename via dmenu 
+if [[ $TERM = linux ]]; then
+	filename="$(dmenu -p 'Filename:' < /dev/null)"
+	[[ -z $filename ]] && 
+		[[ $(printf "no\\nyes" | dmenu -i -p 'Filename empty, continue?') != yes ]] &&
+			exit 0
+	
+	# execute same script in new terminal session
+	# and close terminal if successful
+	eval "$TERMINAL -e ${BASH_SOURCE:-$0} \"$filename\" && exit 0"
+	
+	exit $?
+fi
 
 source "$HOME/.config/shell/rc.d/00_colors"
 
-# using eval in this script, this setting renders is way less evil
 set -e
 
 cd $(dirname "$1")
 
 colorize () {
-  printf "${BIRed}$1${NC}"
+	printf "${BI}$1${NC}"
 }
 
 overwrite () {
@@ -35,7 +58,7 @@ get_url=$(xclip -selection clipboard -o -print0)
 
 # determine which tool to use
 case $get_url in
-  *".m3u8"*) ytbts=1 ;;
+ 	*".m3u8"*) ytbts=1 ;;
 	*"youtu"*) ytbts=1 && ytbraw=1 ;;
 	"curl "*) crl=1 ;;
 	"http"* ) wgt=1 ;;
@@ -48,31 +71,34 @@ esac
 # try to guess filename from 2nd last entry of clipboard history using greenclip
 if [[ -z "$1" ]]
 then
-  [[ -z "$ytbraw" ]] && command -v greenclip &> /dev/null &&
-    filename="$(greenclip print | sed -n 2p).mp4"
+	[[ -z "$ytbraw" ]] && command -v greenclip &> /dev/null &&
+    		filename="$(greenclip print | sed -n 2p).mp4"
 else
-  filename=$(basename -- "$1")
-  # if filename not empty & without file extension
-  [ -n "${filename}" ] && [ "$filename" == "${filename##*.}" ] && 
-    filename="$filename.mp4"
+	filename=$(basename -- "$1")
+	# if filename not empty & without file extension
+	[ -n "${filename}" ] && [ "$filename" == "${filename##*.}" ] && 
+	filename="$filename.mp4"
 fi
 
 # if filename not given just use yt-dlp and exit
-[[ -z "$filename" ]] && yt-dlp "$get_url"
+[[ -z "$filename" ]] && yt-dlp "$get_url" && exit 0
 
 # if file exists ask to continue or to overwrite file
 [[ -f "$filename" ]] && overwrite "$filename"
-
+#
 # use youtube-dl
-[[ -n $ytbts ]] && yt-dlp --hls-use-mpegts "$get_url" -o "$filename"
+[[ -n $ytbts ]] && yt-dlp --hls-use-mpegts "$get_url" -o "$filename" && exit 0
 
 [[ -n $ffmpeg ]] && \
-  cat $get_url | ffmpeg -protocol_whitelist file,http,https,tcp,tls -allowed_extensions ALL -i - -bsf:a aac_adtstoasc -c copy "$filename"
+	cat $get_url | \
+		ffmpeg -protocol_whitelist file,http,https,tcp,tls \
+		       -allowed_extensions ALL -i - \
+		       -bsf:a aac_adtstoasc -c copy "$filename" && exit 0
 
 # use curl (actually translating to wget again)
 if [[ -n $crl ]] ; then
 	get_url=$(echo ${get_url#curl } | sed -e 's/-H/--header/g')
-  wgt=1
+	wgt=1
 fi
 
 # use wget
