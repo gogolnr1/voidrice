@@ -4,6 +4,7 @@
 !keycode  51 = numbersign apostrophe numbersign apostrophe rightsinglequotemark dead_breve rightsinglequotemark dead_breve numbersign apostrophe rightsinglequotemark dead_breve
 
 clear Lock
+! sets slash on german keyboard to AltGr + #
 keycode  51 = numbersign apostrophe numbersign apostrophe slash dead_breve slash dead_breve numbersign apostrophe slash dead_breve
 
 
