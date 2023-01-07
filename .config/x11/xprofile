@@ -6,12 +6,9 @@ export SUDO_ASKPASS="$HOME/.local/bin/dmenupass"
 # This file runs when a DM logs you into a graphical session.
 # If you use startx/xinit like a Chad, this file will also be sourced.
 
-displayinit & xrdbpid=$!	# X related monitor settings (requires global SCREEN_DPI value)
-remaps				# run the remaps script, switching caps/esc and more; check it for more info
-xmodmap ${XDG_CONFIG_HOME:-$HOME/.config}/Xmodmap
-
+displayinit #& xrdbpid=$!	# X related monitor settings (requires global SCREEN_DPI value)
+remaps &			# run the remaps script, switching caps/esc and more; check it for more info
 greenclip daemon &
-setbg &
 
 autostart="mpd xcompmgr dunst unclutter pipewire"
 
@@ -20,4 +17,4 @@ for program in $autostart; do
 done >/dev/null 2>&1
 
 # Ensure that xrdb has finished running before moving on to start the WM/DE.
-[ -n "$xrdbpid" ] && wait "$xrdbpid"
+#[ -n "$xrdbpid" ] && wait "$xrdbpid"

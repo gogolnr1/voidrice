@@ -13,6 +13,7 @@ readonly BACKUP_STICK2="/run/mount/usb/16G-VERBATIM"
 readonly BACKUP_DATA2="/run/mount/usb/800G-GRAUGEAR" #1TB-GRAYGEAR
 
 readonly BACKUP_MTP1="$HOME_DIR/.local/run/mount/nova-air"
+readonly GPG_NAMES=( 'AEA64026B34D3924C225ED6E259B91BF34A53F38' )
 
 # check options
 while test $# -gt 0
@@ -22,11 +23,12 @@ do
             ;;
         hot) hot=1 ;;
         -d|--documents) docs=1 ;;
-        -b|--books) books=1 ;;
-        -m|--music) music=1 ;;
-        -v|--videos) videos=1 ;;
-        -h|--home) home=1 ;;
-        -n|--nova) nova=1 ;;
+        -b|--books)     books=1 ;;
+        -m|--music)     music=1 ;;
+        -v|--videos)    videos=1 ;;
+        -h|--home)      home=1 ;;
+        -n|--nova)      nova=1 ;;
+        -g|--gpg)       gpg=1 ;;
         *) echo "argument $1" ;;
     esac
     shift
@@ -38,6 +40,9 @@ done
 [[ -v music ]] ||\
 [[ -v videos ]] ||\
 [[ -v nova ]] ||\
+[[ -v gpg ]] ||\
+[[ -v books ]] ||\
+[[ -v documents ]] ||\
 	all=1
 
 # -a = --archive
@@ -59,23 +64,57 @@ _rsync () {
   [[ -v hot ]] && rsync "$@" || echo "$@"
 }
 
+_gpg_keys() {
+  [[ -d ${BACKUP_STICK2} ]] || return 1
+
+  if [[ $1 = --backup ]]; then
+    mkdir -p ${BACKUP_STICK2}/gnupg
+    
+    [[ -v hot ]] &&
+      gpg --export-ownertrust > ${BACKUP_STICK2}/gnupg/trustdb-backup.txt
+          echo "Ownertrust exported."
+
+    for name in $GPG_NAMES; do
+      if [[ -v hot ]]; then
+        gpg --export-secret-keys --armor ${name} > ${BACKUP_STICK2}/gnupg/${name}-backup.asc &&
+          echo "$name key exported."
+      else
+        gpg --list-secret-keys ${name}
+      fi
+    done
+  fi
+  if [[ $1 = --restore ]]; then
+    for name in $GPG_NAMES; do
+      gpg --import ${BACKUP_STICK2}/gnupg/${name}-backup.asc &&
+        echo "$name key imported."
+    done
+
+    gpg --import-ownertrust < ${BACKUP_STICK2}/gnupg/trustdb-backup.txt &&
+      echo "Ownertrust imported."
+  fi
+}
+
+backup_gpg_keys() { _gpg_keys --backup; }
+restore_gpg_keys() { _gpg_keys --restore; }
+
 ### backup home ###
 backup_home () {
   printf "\nhome:\n"
+
   local home_filter="${HOME_DIR}/.local/share/voidrice/sync_resources/home_filter.txt"
   local home_excludes="${HOME_DIR}/.local/share/voidrice/sync_resources/home_excludes.txt"
 
-  [ -d "$BACKUP_STICK1" ] && BACKUP_STICK="$BACKUP_STICK1" || BACKUP_STICK="$BACKUP_DATA2/BACKUP_STICK"
-  if [ -d "$BACKUP_STICK" ]; then
-    _rsync ${rsync_arguments_home} --filter="merge ${home_filter}" $HOME_DIR/ ${BACKUP_STICK1}/B
+  [ -d "$BACKUP_STICK1" ] && bs="$BACKUP_STICK1" || bs="$BACKUP_DATA2/BACKUP_STICK"
+  if [ -d "$bs" ]; then
+    _rsync ${rsync_arguments_home} --filter="merge ${home_filter}" $HOME_DIR/ ${bs}/B
 	#--exclude="${HOME_EXCLUDES}" \
 
     if [ -d "$HOME_DIR/../rstudio" ]; then
-      _rsync ${rsync_arguments_home} $HOME_DIR/../rstudio/ ${BACKUP_STICK1}/B/home_rstudio
+      _rsync ${rsync_arguments_home} $HOME_DIR/../rstudio/ ${bs}/B/home_rstudio
     fi
 
     if [ -d "${HOME_DIR}/ydisk" ]; then
-      _rsync ${rsync_arguments_home} ${HOME_DIR}/ydisk/ ${BACKUP_STICK1}/ydisk
+      _rsync ${rsync_arguments_home} ${HOME_DIR}/ydisk/ ${bs}/ydisk
     fi
   fi
 }
@@ -185,14 +224,16 @@ backup_nova () {
 }
 
 if [ -v restore ]; then
-	restore_home
+	[[ -n $gpg ]]  && restore_gpg_keys
+	[[ -n $home ]] && restore_home
 else
-	[[ -n "$all" ]] || [[ -n "$home" ]]   && backup_home
-	[[ -n "$all" ]] || [[ -n "$docs" ]]   && backup_documents
-	[[ -n "$all" ]] || [[ -n "$stick" ]]  && stick_to_stick
-	[[ -n "$all" ]] || [[ -n "$videos" ]] && backup_movies
-	[[ -n "$all" ]] || [[ -n "$music" ]]  && backup_music
-	[[ -n "$all" ]] || [[ -n "$books" ]]  && backup_books
-	[[ -n "$all" ]] || [[ -n "$nova" ]]  && backup_nova
+	[[ -n $all ]] || [[ -n $home ]]   && backup_home
+	[[ -n $all ]] || [[ -n $docs ]]   && backup_documents
+	[[ -n $all ]] || [[ -n $stick ]]  && stick_to_stick
+	[[ -n $all ]] || [[ -n $gpg ]]    && backup_gpg_keys
+	[[ -n $all ]] || [[ -n $videos ]] && backup_movies
+	[[ -n $all ]] || [[ -n $music ]]  && backup_music
+	[[ -n $all ]] || [[ -n $books ]]  && backup_books
+	[[ -n $all ]] || [[ -n $nova ]]   && backup_nova
 
 fi
