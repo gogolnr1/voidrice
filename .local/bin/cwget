@@ -16,10 +16,10 @@ if [[ $TERM = linux ]]; then
 	[[ -z $filename ]] && 
 		[[ $(printf "no\\nyes" | dmenu -i -p 'Filename empty, continue?') != yes ]] &&
 			exit 0
-	
+	:
 	# execute same script in new terminal session
 	# and close terminal if successful
-	eval "$TERMINAL -e ${BASH_SOURCE:-$0} \"$filename\" && exit 0"
+	eval "$TERMINAL -e ${BASH_SOURCE:-$0} --eval \"$filename\" && exit 0"
 	
 	exit $?
 fi
@@ -28,7 +28,12 @@ source "$HOME/.config/shell/rc.d/00_colors"
 
 set -e
 
-cd $(dirname "$1")
+if [[ $1 = --eval ]]; then
+	shift
+	cd ${XDG_VIDEOS_DIR:-$HOME/Videos}
+else
+	cd $(dirname -- "$1")
+fi
 
 colorize () {
 	printf "${BI}$1${NC}"
