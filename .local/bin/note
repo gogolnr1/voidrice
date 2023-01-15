@@ -1,0 +1,113 @@
+#!/bin/bash
+
+# make notes to obsidian with dmenu support and image recognition for clipboard content
+# dependencies: xclip notify-send
+
+capitalize() {
+  printf '%s' "$1" | head -c 1 | tr [:lower:] [:upper:]
+  printf '%s' "$1" | tail -c '+2'
+}
+
+exn() {
+	[[ -n $terminal ]] && echo "$@" || notify-send -- "$@"
+}
+
+ARGS=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -d|--daily) daily=true; shift ;;
+    -u|--unsorted) unsorted=true; shift ;;
+    -i|--image) shift; tmpimgpath=$1; shift ;;
+    *) ARGS+=("$1"); shift ;;
+  esac
+done
+
+entrypath="$KB_DIRECTORY"
+attachements="$KB_DIRECTORY/Extras/Images"
+mimetype='image/png'
+nowdate=$(date +"%Y-%m-%d");
+nowtime=$(date +"%H-%M-%S");
+
+# terminal or system call?
+[ -t 1 ] && [ "$TERM" != 'linux' ] &&
+	terminal=true
+
+if [[ -n $daily ]]; then 
+	subfolder="Calendar"
+	filename="$nowdate.md"
+	noteprefix="- "
+else #[[ -n $unsorted ]]
+	subfolder="+ Encounters"
+fi
+
+# use arguments or dmenu prompt for note content
+[[ -n $terminal ]] &&
+	content="$ARGS" ||
+	content=$(dmenu -p "$subfolder:" < /dev/null)
+
+# if dmenu exit with <esc>
+[[ $? = 1 ]] && exit 1
+
+# append to last note else create new file
+if [[ $content = ++ ]] && [[ -z $filename ]]; then
+	# get filename of last created file
+	filename=$(find "$entrypath/$subfolder" -type f -printf "%T@ %f\n" | sort | cut -d' ' -f2 | tail -n1)
+	unset content
+else
+	[[ -z $content ]] && content="Content $nowtime-$nowdate"
+	filename="$(capitalize "$content").md"
+fi
+
+filepath="$entrypath/$subfolder/$filename"
+
+# declare wether image is available and of what source (clipboard or parameter)
+if [[ -n $tmpimgpath ]] && [[ -f $tmpimgpath ]]
+	then istmp=true && image=true
+elif [[ $(xclip -selection clipboard -t TARGETS -o | grep "$mimetype") ]]
+	then isclp=true && image=true
+fi
+
+# if image source given then declare name and path
+# and write it into vault
+if [[ -n $image ]]; then
+	[[ -n $content ]] && 
+		imagename="$nowdate $content.png" ||
+		imagename="$nowdate-$nowtime.png"
+	imagepath="$attachements/$imagename"
+
+	# if clipboard content is image then save it into vault
+	# and clear clipboard from image content to not be used again in the next note
+	[[ -n $isclp ]] &&
+		xclip -selection clipboard -t $mimetype -o > "$imagepath" &&
+		xclip -selection clipboard < /dev/null
+
+	# if file location given, copy it into vault
+	[[ -n $istmp ]] && 
+		mv $tmpimgpath "$imagepath"
+fi
+
+# if neither text nor image set, open vim for editing manually
+# else if text contains link then create new note with link to be scraped
+# else if only text is set then insert checkbox with text
+if [[ -z $content ]] && [[ -z $image ]]; then
+	nvim "$entrypath/$subfolder/$filename"
+elif [[ $content =~ ^https?://.* ]]; then
+	echo $"- Scrap [$content]" >> "$filepath" &&
+		finish=true
+elif [[ -n $content ]]; then
+	echo $"$noteprefix$content" >> "$filepath" && 
+		finish=true
+fi
+
+# if image exists then add markdown embeding
+if [[ -n $imagepath ]] && [[ -f $imagepath ]]; then
+	[[ -z $content ]] && echo "$noteprefix$nowdate-$nowtime:" >> "$filepath"
+	echo "![[$imagename]]" >> "$filepath" &&
+		finish=true
+fi
+
+if [[ -n $finish ]]; then
+	exn "$subfolder entry made"
+else
+	exn "Something went wrong"
+fi
