@@ -1,0 +1,3 @@
+#!/bin/bash
+
+maim -q -i "$(xdotool getactivewindow)" /tmp/notes_image && note --unsorted --image /tmp/notes_image
