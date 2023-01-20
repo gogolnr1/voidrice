@@ -25,7 +25,7 @@ alias \
 	bc="bc -ql" \
 	mkd="mkdir -pv" \
 	yt="yt-dlp --embed-metadata -i" \
-	yts="yt --write-subs --sub-langs 'en,de'" \
+	yts="yt-dlp --write-subs --sub-langs 'en,de'" \
 	yta="yt -x -f bestaudio/best" \
 	ffmpeg="ffmpeg -hide_banner"
 
