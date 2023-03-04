@@ -1,0 +1,9 @@
+#!/bin/bash
+
+url=${!#} # last argument
+args=$@ # all arguments
+
+[[ ! $url = *"youtu"* ]] && url=$(xclip -selection clipboard -o -print0) || unset args[-1]
+[[ ! $url = *"youtu"* ]] && echo "No valid download pattern. Exiting." && exit 0
+
+yt-dlp $args "$url"

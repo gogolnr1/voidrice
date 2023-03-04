@@ -24,9 +24,10 @@ alias \
 	rm="rmo" \
 	bc="bc -ql" \
 	mkd="mkdir -pv" \
-	yt="yt-dlp --embed-metadata -i" \
-	yts="yt-dlp --write-subs --sub-langs 'en,de'" \
+	yt="ytd --embed-metadata -i" \
+	yts="ytd --write-subs --sub-langs 'en,de'" \
 	yta="yt -x -f bestaudio/best" \
+	yta3="yta --audio-format mp3" \
 	ffmpeg="ffmpeg -hide_banner"
 
 # Colorize commands when possible.
@@ -42,6 +43,7 @@ alias \
 alias \
 	ka="killall" \
 	g="git" \
+	gu="git ls-files --other --exclude-standard --directory ." \
 	trem="transmission-remote" \
 	YT="youtube-viewer" \
 	sdn="shutdown -h now" \
