@@ -5,8 +5,8 @@
 # features:
 # - take second entry from greenclip as possible filename
 # - use yt-dlp or wget depending on clipboard content
-# - asks to continue existing filename or overwrite
-# - can be called system keybindings and then asks for filename via dmenu prompt
+# - try to continue downloading existing file after confirming continuation
+# - can be called via system keybindings, then asks for filename via dmenu prompt
 # - autocompletes with .mp4 if no suffix is given
 # - also accepts curl calls
 
@@ -85,8 +85,10 @@ else
 	filename="$filename.mp4"
 fi
 
+# -x --audio-format mp3 --audio-quality 0
+
 # if filename not given just use yt-dlp and exit
-[[ -z "$filename" ]] && yt-dlp "$get_url" && exit 0
+[[ -z "$filename" ]] && yt-dlp --embed-metadata -i "$get_url" && exit 0
 
 # if file exists ask to continue or to overwrite file
 [[ -f "$filename" ]] && overwrite "$filename"
