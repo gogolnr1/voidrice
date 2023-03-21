@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 
-[[ -n $1 ]] && aid="$1" || aid="$(xclip -s c -o print0)"
-echo "$url"
-echo "opening..."
-xdg-open "https://archive.org/services/loans/loan/?action=media_url&identifier=$aid&format=pdf&redirect=1" > /dev/null 2>&1
-exit 0
+[[ -z $(which xmlstarlet 2>/dev/null) ]] && error "command xmlstarlet not installed"
+[[ -n $1 ]] && aid="$1" || aid="$(xclip -selection clipboard -o -print0)"
+url="https://archive.org/services/loans/loan/?action=media_url&identifier=$aid&format=pdf&redirect=1"
+acsmfile="$HOME/Downloads/URLLink.acsm"
+echo "Opening URL $url" && xdg-open "$url" > /dev/null 2>&1 & disown
 
-echo "url to enter in your browser when you are logged in to archive.org:"
-echo "$url"
-echo ""
-echo "Then go to the following git repo and download that amazing tool, which downloads the DRM file from Adobe and de-DRMs it:"
-echo "https://github.com/BentonEdmondson/knock"
+printf "Now put the URLLink.acsm file into your ~/Downloads directory"
+until [ -f "$acsmfile" ]
+do
+     sleep 1
+     printf "%0.s."
+done && echo "found"
+
+booktitle=`xmlstarlet sel -t -v '//*[local-name()="title"][text()]' -nl "$acsmfile"`
+destination="$HOME/Documents/$booktitle.pdf"
+
+knock "$acsmfile" && 
+	mv -iv "${acsmfile/.acsm/.pdf}" "$destination" &&
+	rm -f "$acsmfile"
