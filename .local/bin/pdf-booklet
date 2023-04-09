@@ -1,0 +1,202 @@
+#!/usr/bin/env bash
+# Reorder pages in a PDF file to print a booklet.
+# Then, print the output PDF in duplex mode, short-edge binding, 2 pages per sheet.
+
+SCRIPT=$(basename "$BASH_SOURCE")
+INFILE=
+OUTFILE=
+VERBOSE=false
+SYSTEM=$(uname -s)
+
+error() { echo >&2 "$SCRIPT: $*"; exit 1; }
+usage() { echo >&2 "usage: $SCRIPT infile [-v] [-o outfile]"; exit 1; }
+verbose() { $VERBOSE && echo >&2 "$SCRIPT: $*"; }
+
+# Find various commands. The commands qpdf and jq are required.
+# The command pdfinfo is optional, it comes with package poppler-utils (Ubuntu) or xpdf (macOS Homebrew).
+# The command pdfjam is also optional
+[[ -z $(which qpdf 2>/dev/null) ]] && error "command qpdf not installed"
+[[ -z $(which jq 2>/dev/null) ]] && error "command jq not installed"
+PDFINFO=$(which pdfinfo 2>/dev/null)
+PDFJAM=$(which pdfjam 2>/dev/null)
+
+# Get file size in bytes of a file.
+file-size()
+{
+    [[ $SYSTEM == Darwin ]] && stat -f %z "$1" || stat -c %s "$1"
+}
+
+# Build a PDF file name with a pre-suffix.
+out-pdf-file()
+{
+    local dir=$(dirname "$1")
+    [[ $dir == . ]] && dir= || dir+="/"
+    echo $dir$(basename "$1" .pdf).$2.pdf
+}
+
+# Get page "width height" of a PDF file, in points.
+pdf-page-size()
+{
+    local a4="595 842"
+    local file="$1"
+    local size=
+    if [[ -z $file ]]; then
+        # No file provided, use A4 as default.
+        size="$a4"
+    fi
+    if [[ -z $size && -n $PDFINFO ]]; then
+        # Command pdfinfo available, try it.
+        size=$($PDFINFO "$file" | sed -e '/^Page size:/!d' -e 's/^Page size:[[:space:]]*//' -e 's/ *pts.*$//' -e 's/ *x */ /' | head -1)
+    fi
+    if [[ -z $size ]]; then
+        # Command pdfinfo not found or did not find size, use command qpdf.
+        size=$(qpdf "$file" --json | jq -j 'first(.objects[] | select(."/MediaBox") | ."/MediaBox") | .[2]," ",.[3]' 2>/dev/null)
+    fi
+    if [[ -z $size ]]; then
+        # Size not found, use A4 as default.
+        size="$a4"
+    fi
+    echo $size
+}
+
+# Create a blank PDF file, with optional reference PDF file for page size.
+create-blank-pdf()
+{
+    local outfile="$1"
+    local reffile="$2"
+    local size=$(pdf-page-size "$reffile")
+    echo '%PDF-1.4' >"$outfile"
+    local obj1=$(file-size "$outfile")
+    echo '1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj' >>"$outfile"
+    local obj2=$(file-size "$outfile")
+    echo '2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj' >>"$outfile"
+    local obj3=$(file-size "$outfile")
+    printf '3 0 obj<</Type/Page/MediaBox[0 0 %s]/Parent 2 0 R/Resources<<>>>>endobj\n' "$size" >>"$outfile"
+    local xref=$(file-size "$outfile")
+    echo 'xref' >>"$outfile"
+    echo '0 4' >>"$outfile"
+    echo '0000000000 65535 f' >>"$outfile"
+    printf '%010d 00000 n\n' $obj1 >>"$outfile"
+    printf '%010d 00000 n\n' $obj2 >>"$outfile"
+    printf '%010d 00000 n\n' $obj3 >>"$outfile"
+    echo 'trailer<</Size 4/Root 1 0 R>>' >>"$outfile"
+    echo 'startxref' >>"$outfile"
+    printf '%d\n' $xref >>"$outfile"
+    echo '%%EOF' >>"$outfile"
+}
+
+# Build parameters for qpdf --pages (depends on the blank page requirements).
+generate-pdf()
+{
+	PAGELIST=$1
+	OUTFILE=$2
+	if [[ -z "$BLANKFILE" ]]; then
+	    # All pages are from the same file.
+	    PAGEOPT=("$INFILE" ${PAGELIST// /,})
+	else
+	    PAGEOPT=()
+	    CURFILE=
+	    for p in $PAGELIST; do
+		if [[ $p -gt $INPAGES ]]; then
+		    FILE="$BLANKFILE"
+		    p=1
+		else
+		    FILE="$INFILE"
+		fi
+		if [[ $FILE != $CURFILE ]]; then
+		    PAGEOPT+=("$FILE" $p)
+		    CURFILE="$FILE"
+		else
+		    PAGEOPT[-1]+=",$p"
+		fi
+	    done
+	fi
+
+	# Generate the output in one pass.
+	if [[ ! $DOUBLESIDED == [nN]* ]]; then
+		$PDFJAM --quiet --landscape --nup 2x1 "${PAGEOPT[@]}" --outfile "$OUTFILE"
+	else
+		qpdf --empty --pages "${PAGEOPT[@]}" -- "$OUTFILE"
+	fi
+	echo "Generated file: $OUTFILE"
+}
+
+# Decode command line parameters.
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -o)
+            [[ $# -gt 1 ]] || usage; shift
+            [[ -n "$OUTFILE" ]] && usage
+            OUTFILE="$1"
+            ;;
+        -v)
+            VERBOSE=true
+            ;;
+        -*)
+            usage
+            ;;
+        *)
+            [[ -n "$INFILE" ]] && usage
+            INFILE="$1"
+            ;;
+    esac
+    shift
+done
+
+# Default output file name.
+[[ -z "$OUTFILE" ]] && OUTFILE=$(out-pdf-file "$INFILE" booklet)
+[[ -z "$OUTFILE_FRONT" ]] && OUTFILE_FRONT=$(out-pdf-file "$INFILE" booklet_front)
+[[ -z "$OUTFILE_BACK" ]] && OUTFILE_BACK=$(out-pdf-file "$INFILE" booklet_back)
+
+# Count pages.
+INPAGES=$(qpdf --show-npages "$INFILE")
+OUTSHEETS=$((($INPAGES + 3) / 4))
+OUTPAGES=$(($OUTSHEETS * 4))
+[[ "$INPAGES" -gt 0 ]] || error "$INFILE: empty or invalid PDF file"
+verbose "$INFILE: $INPAGES pages, rounded to $OUTPAGES pages, $OUTSHEETS sheets"
+
+# If input number of pages is not a multiple of 4, we need a blank page template PDF file.
+BLANKFILE=
+if [[ $INPAGES -ne $OUTPAGES ]]; then
+    BLANKFILE=$(out-pdf-file "$OUTFILE" blank)
+    create-blank-pdf "$BLANKFILE" "$INFILE"
+fi
+
+# Build page order.
+PAGELIST=
+PAGELIST_FRONT=
+PAGELIST_BACK=
+for p in $(seq 0 2 $((($OUTPAGES - 4) / 2))); do
+    PAGELIST="$PAGELIST $(($OUTPAGES - $p)) $(($p + 1)) $(($p + 2)) $(($OUTPAGES - $p - 1))"
+    PAGELIST_FRONT="$PAGELIST_FRONT $(($OUTPAGES - $p)) $(($p + 1))"
+    PAGELIST_BACK="$PAGELIST_BACK $(($p + 2)) $(($OUTPAGES - $p - 1))"
+done
+PAGELIST=${PAGELIST/# /}
+
+# If pdfjam is installed, it asks for double sided output PDF 
+[[ -n $PDFJAM ]] && read -p "Generate double sided output PDF? (Y/n) " DOUBLESIDED
+
+# Check for pdfjam and ask if binding margin should be applied
+MARGINEDFILE=
+if [[ -n $PDFJAM ]]; then
+	read -p "Set margin for booklet binding? (Y/n) " setmargins
+	if [[ ! $setmargins == [nN]* ]]; then
+		offset=$([[ $DOUBLESIDED == [nN]* ]] && echo '0.75' || echo '1.5')
+		MARGINEDFILE="$(out-pdf-file "$INFILE" pdfjam)"
+		$PDFJAM --quiet --fitpaper true --twoside --offset "${offset}cm 0cm" $INFILE --outfile $MARGINEDFILE
+		INFILE="$MARGINEDFILE"
+		unset $setmargins
+		unset $offset
+	fi
+fi
+
+generate-pdf "$PAGELIST" "$OUTFILE"
+generate-pdf "$PAGELIST_FRONT" "$OUTFILE_FRONT"
+generate-pdf "$PAGELIST_BACK" "$OUTFILE_BACK"
+
+# Final cleanup.
+[[ -n "$BLANKFILE" ]] && rm -rf "$BLANKFILE"
+[[ -n "$MARGINEDFILE" ]] && rm -rf "$MARGINEDFILE"
+verbose "print $OUTFILE, duplex mode, short-edge binding, 2 pages per sheet"
+exit 0
+
