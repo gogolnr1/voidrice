@@ -6,6 +6,8 @@
 # Use $XINITRC variable if file exists.
 [ -f "$XINITRC" ] && alias startx="startx $XINITRC"
 
+[ -f "$MBSYNCRC" ] && alias mbsync="mbsync -c $MBSYNCRC"
+
 # sudo not required for some system commands
 for command in mount umount sv pacman updatedb su shutdown poweroff reboot brightness; do
 	alias $command="sudo $command"
@@ -15,6 +17,10 @@ mkd() { mkdir -pv "$@" && cd "$@"; }
 nv() { cd "$(nova-air)" }
 rmo() { rmn "$@" }
 cpstat() { time rsync -a --info=progress2 --stats $1 $2 }
+se() {
+	choice="$(find ~/.local/bin -mindepth 1 -printf '%P\n' | fzf)"
+	[ -f "$HOME/.local/bin/$choice" ] && $EDITOR "$HOME/.local/bin/$choice"
+	;}
 
 # Verbosity and settings that you pretty much just always are going to want.
 #rm="rm -vI" \
@@ -23,11 +29,13 @@ alias \
 	mv="mv -iv" \
 	rm="rmo" \
 	bc="bc -ql" \
+	rsync="rsync -vrPlu" \
 	mkd="mkdir -pv" \
-	yt="ytd --embed-metadata -i" \
 	yts="ytd --write-subs --sub-langs 'en,de'" \
-	yta="yt -x -f bestaudio/best" \
 	yta3="yta --audio-format mp3" \
+	yt="yt-dlp --embed-metadata -i" \
+	yta="yt -x -f bestaudio/best" \
+	ytt="yt --skip-download --write-thumbnail" \
 	ffmpeg="ffmpeg -hide_banner"
 
 # Colorize commands when possible.
@@ -36,7 +44,7 @@ alias \
 	ll="ls -lahN --color=auto --group-directories-first" \
 	grep="grep --color=auto" \
 	diff="diff --color=auto" \
-	ccat="highlight --out-format=ansi"
+	ccat="highlight --out-format=ansi" \
 	ip="ip -color=auto"
 
 # These common commands are just too long! Abbreviate them.
@@ -57,13 +65,12 @@ alias \
 
 alias \
 	z="zathura" \
-	lf="lfub" \
-	magit="nvim -c MagitOnly" \
-	ref="shortcuts >/dev/null; source ${XDG_CONFIG_HOME:-$HOME/.config}/shell/shortcutrc ; source ${XDG_CONFIG_HOME:-$HOME/.config}/shell/zshnameddirrc" \
-	weath="less -S ${XDG_DATA_HOME:-$HOME/.local/share}/weatherreport" \
 	pbcopy="xclip -selection c" \
 	pbpaste="xclip -selection clipboard -o" \
 	unsorted="note --unsorted" \
 	daily="note --daily" \
 	mp="ncmpc --host=127.0.0.1 --port=6600"
-
+	lf="lfub" \
+	magit="nvim -c MagitOnly" \
+	ref="shortcuts >/dev/null; source ${XDG_CONFIG_HOME:-$HOME/.config}/shell/shortcutrc ; source ${XDG_CONFIG_HOME:-$HOME/.config}/shell/zshnameddirrc" \
+	weath="less -S ${XDG_CACHE_HOME:-$HOME/.cache}/weatherreport" \
