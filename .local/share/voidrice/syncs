@@ -69,7 +69,7 @@ _gpg_keys() {
 
   if [[ $1 = --backup ]]; then
     mkdir -p ${BACKUP_STICK2}/gnupg
-    
+
     [[ -v hot ]] &&
       gpg --export-ownertrust > ${BACKUP_STICK2}/gnupg/trustdb-backup.txt
           echo "Ownertrust exported."
@@ -167,7 +167,7 @@ backup_movies () {
 
       read -p 'Clear Movies? ' clearm
       if [[ $clearm == "y" ]]; then
-        _rsync ${rsync_arguments_media} --delete --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/Movies ${backupdir}/Videos/Movies
+        _rsync ${rsync_arguments_media} --delete --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/Movies/ ${backupdir}/Videos/Movies
       fi
     fi
   fi
