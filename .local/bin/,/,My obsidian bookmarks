@@ -1,0 +1,9 @@
+#!/bib/bash
+source `which comma`
+
+# $KB_DIRECTORY
+
+cd $HOME/Notes
+for file in $(grep -r "#bookmark" | sed 's/:.*//'); do
+	echo "$(basename $file .md)"
+done

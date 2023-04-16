@@ -1,0 +1,19 @@
+#!/bin/bash
+
+GITHUB_TOKEN="<YOUR_TOKEN>"
+GOOGLE_TOKEN="<YOUR_TOKEN>"
+YOUTUBE_TOKEN="<YOUR_TOKEN>"
+
+#[[ $TERM = linux ]] && echo "$
+dxf() { # terminal -> use fzf, dwm call -> use dmenu
+	if [[ $TERM != linux ]]
+		then shift && fzf $@
+		else dmenu -i -l 30 -p $@
+	fi
+}
+
+if [[ `basename "$0"` = comma ]]; then
+	location=$HOME/.local/bin/,
+	choice=$(ls $location | grep '^,' | sed 's/^,//' | LC_COLLATE=C sort | dxf "Select:")
+	[[ -n $choice ]] && sh "$location/,$choice"
+fi

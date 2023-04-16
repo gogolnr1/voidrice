@@ -1,0 +1,26 @@
+#!/bin/bash
+# List my games here
+source `which comma`
+#DISPLAY_MODE='1920x1080'
+
+# detect active display to change resolution for i.e. HiDPI displays
+[[ -n $DISPLAY_MODE ]] && 
+	screen=$(xrandr -q | awk '/ connected primary/ {print $1}')
+
+appspath=${XDG_DATA_HOME:-$HOME/.local/share}/applications
+gamesuffix='.game.desktop'
+
+gametitle=$(
+	for file in $appspath/*$gamesuffix
+		do echo `basename "$file" $gamesuffix`; done | 
+			dxf "Games:")
+
+if [[ -n $gametitle ]]; then
+	[[ -n $screen ]] &&
+		xrandr --output $screen --primary --mode "$DISPLAY_MODE"
+
+	dex --wait "$appspath/$gametitle$gamesuffix" 2>/dev/null
+
+	[[ -n $screen ]] &&
+		xrandr --output $screen --primary --auto
+fi
