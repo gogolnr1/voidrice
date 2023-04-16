@@ -16,8 +16,8 @@ export QT_AUTO_SCREEN_SCALE_FACTOR=1
 
 newdpi=$(($SCREEN_DPI * $GDK_SCALE))
 
-# xrandenv is declared in .bashenv file
-xrandr --dpi $newdpi $( xrandrenv 2&> /dev/null )
+# xrandenv is declared in .bashrc file
+xrandr --dpi $newdpi $( source $HOME/.bashrc && xrandrenv )
 
 xrdb ${XDG_CONFIG_HOME:-$HOME/.config}/x11/xresources &&
 	echo "Xft.dpi: $newdpi" | xrdb -merge
