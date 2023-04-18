@@ -4,5 +4,5 @@ IFS="|"
 read -a lines    <<< "$(ls -hNAp --color --group-directories-first|tr "\n" "|")"
 read -a lines_nc <<< "$(ls -hNAp         --group-directories-first|tr "\n" "|")"
 
-[[ $(basename $0) == "lsn" ]] &&
+[[ $(basename $0) == lsn ]] &&
 	printf '%s\n' "${lines[@]}"|nl
