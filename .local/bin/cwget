@@ -28,19 +28,25 @@ source "$HOME/.config/shell/rc.d/00_colors"
 
 set -e
 
-if [[ $1 = --eval ]]; then
-	shift
-	cd ${XDG_VIDEOS_DIR:-$HOME/Videos}
-else
-	cd $(dirname -- "$1")
-fi
+case $1 in
+	--eval) iseval=1 && shift;;
+esac
+
+[[ -n $iseval ]] && cd ${XDG_VIDEOS_DIR:-$HOME/Videos} || cd $(dirname -- "$1")
 
 colorize () {
 	printf "${BI}$1${NC}"
 }
 
+_yt-dlp() {
+	read -p "\"Live stream\"? (y/N) " live
+	[[ $live == [yY]* ]] && usets='--downloader ffmpeg --hls-use-mpegts'
+
+	yt-dlp $usets "$@"
+}
+
 overwrite () {
-  local f=$(colorize "$1")
+	local f=$(colorize "$1")
 	echo "[o]verwite or [c]ontinue $f? -- nothing to exit"
 	read ANSWER
 	case $ANSWER in
@@ -100,16 +106,14 @@ fi
 [ -n "${filename}" ] && [ "$filename" == "${filename##*.}" ] &&
 	filename="$filename.mp4"
 
-# -x --audio-format mp3 --audio-quality 0
-
 # if filename not given just use yt-dlp and exit
-[[ -z "$filename" ]] && yt-dlp --embed-metadata -i "$get_url" && exit 0
+[[ -z "$filename" ]] && _yt-dlp --embed-metadata -i "$get_url" && exit 0
 
 # if file exists ask to continue or to overwrite file
 [[ -f "$filename" ]] && overwrite "$filename"
 
 # use youtube-dl
-[[ -n $ytbts ]] && yt-dlp --hls-use-mpegts "$get_url" -o "$filename" && exit 0
+[[ -n $ytbts ]] && _yt-dlp ${usets} "$get_url" -o "$filename" && exit 0
 
 [[ -n $ffmpeg ]] && \
 	cat $get_url | \
