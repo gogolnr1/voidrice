@@ -31,7 +31,7 @@ out-pdf-file()
 {
     local dir=$(dirname "$1")
     [[ $dir == . ]] && dir= || dir+="/"
-    echo $dir$(basename "$1" .pdf).$2.pdf
+    echo "$dir$(basename "$1" .pdf).$2.pdf"
 }
 
 # Get page "width height" of a PDF file, in points.
@@ -173,7 +173,7 @@ for p in $(seq 0 2 $((($OUTPAGES - 4) / 2))); do
 done
 PAGELIST=${PAGELIST/# /}
 
-# If pdfjam is installed, it asks for double sided output PDF 
+# If pdfjam is installed, it asks for double sided output PDF
 [[ -n $PDFJAM ]] && read -p "Generate double sided output PDF? (Y/n) " DOUBLESIDED
 
 # Check for pdfjam and ask if binding margin should be applied
@@ -183,7 +183,7 @@ if [[ -n $PDFJAM ]]; then
 	if [[ ! $setmargins == [nN]* ]]; then
 		offset=$([[ $DOUBLESIDED == [nN]* ]] && echo '0.75' || echo '1.5')
 		MARGINEDFILE="$(out-pdf-file "$INFILE" pdfjam)"
-		$PDFJAM --quiet --fitpaper true --twoside --offset "${offset}cm 0cm" $INFILE --outfile $MARGINEDFILE
+		$PDFJAM --quiet --fitpaper true --twoside --offset "${offset}cm 0cm" "$INFILE" --outfile "$MARGINEDFILE"
 		INFILE="$MARGINEDFILE"
 		unset $setmargins
 		unset $offset
@@ -199,4 +199,3 @@ generate-pdf "$PAGELIST_BACK" "$OUTFILE_BACK"
 [[ -n "$MARGINEDFILE" ]] && rm -rf "$MARGINEDFILE"
 verbose "print $OUTFILE, duplex mode, short-edge binding, 2 pages per sheet"
 exit 0
-
