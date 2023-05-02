@@ -30,7 +30,7 @@ if [[ -f "$downloaddir/$acsmfile" ]]; then
 fi
 
 if [[ -z $skipdownload ]]; then
-	printf "Now your browser will open a new instance to download the '$acsmfile' file. Save that file into your $downloaddir directory.\n"
+	printf "Your browser will now open a new instance to download the '$acsmfile' file. Save that file into $downloaddir.\n"
 	read -p "Press Enter to continue... " </dev/tty
 
 	url="https://archive.org/services/loans/loan/?action=media_url&identifier=$aid&format=pdf&redirect=1"
@@ -55,7 +55,7 @@ if [[ -f $createdfile ]]; then
 	destination="$documentsdir/$booktitle"
 	extension="${createdfile##*.}"
 
-	mv -iv "${acsmfile/.acsm/.$extension}" "$destination.$extension"
+	mv -iv "$downloaddir/${acsmfile/.acsm/.$extension}" "$destination.$extension"
 
 	echo "Your document has been saved here: $destination.$extension"
 else
