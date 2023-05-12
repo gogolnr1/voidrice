@@ -14,8 +14,7 @@
 if [[ $TERM = linux ]]; then
 	filename="$(dmenu -p 'Filename:' < /dev/null)"
 	[[ -z $filename ]] &&
-		[[ $(printf "no\\nyes" | dmenu -i -p 'Filename empty, continue?') != yes ]] &&
-			exit 0
+		exit 0
 
 	# execute same script in new terminal session
 	# and close terminal if successful
