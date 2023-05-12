@@ -2,12 +2,13 @@
 source `which comma`
 
 USERNAME=gogolnr1
-TOKEN=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
+#TOKEN=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
+[[ -z $GITHUB_TOKEN ]] && exn 'GITHUB_TOKEN not set, exiting...' && exit 1
 
 # User base URL
 BASEURL="https://api.github.com/user/$USERNAME/repos"
 
-REPO=$( curl -H "Authorization: token $TOKEN" \
+REPO=$( curl -H "Authorization: token $GITHUB_TOKEN" \
 		https://api.github.com/users/$USERNAME/starred |
 	jq -r '.[] | [.full_name, .description] | @tsv' | column -ts $'\t' |
 	dxf "Stars:" | sed 's/\s.*//' )
