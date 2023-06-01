@@ -47,11 +47,13 @@ nexthref=${next[2]}
 [[ $episode -lt $nextepisode ]] &&
 	xdg-open "$BASEURL/$nexthref/" || { echo 'no new episode found'; exit 1; }
 
-xclip -selection clipboard blank
+xclip -selection clippoard < /dev/null
 
 printf "Waiting for a link in the clipboard ..."
 until xclip -selection clipboard -o -print0 | grep -qP '^http.*';
-	do sleep 1 && printf "%0.s." done && echo " found"
+do
+	sleep 1 && printf "%0.s."
+done && echo " found"
 
 season=`printf '%02d\n' "$season"` # fill up with '0'
 nextepisode=`printf '%02d\n' "$nextepisode"`

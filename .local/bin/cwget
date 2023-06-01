@@ -102,7 +102,7 @@ if [[ $(printf "%s\n" "${files[@]}" | wc -l) -gt 0 ]]; then
 fi
 
 # if filename not empty & without file extension
-[ -n "${filename}" ] && [ "$filename" == "${filename##*.}" ] &&
+[ -n "${filename}" ] && [ "$filename" == "${filename##*.mp4}" ] &&
 	filename="$filename.mp4"
 
 # if filename not given just use yt-dlp and exit
