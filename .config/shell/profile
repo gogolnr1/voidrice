@@ -20,6 +20,8 @@ export BROWSER="librewolf"
 # export CRYPTOURL="rate.sx"
 # export WTTRURL="wttr.in"
 
+export KB_DIRECTORY="$HOME/Notes"
+
 # ~/ Clean-up:
 export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_DATA_HOME="$HOME/.local/share"
