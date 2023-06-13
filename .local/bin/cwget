@@ -29,6 +29,7 @@ set -e
 
 case $1 in
 	--eval) iseval=1 && shift;;
+	--live) islive=1 && shift;;
 esac
 
 [[ -n $iseval ]] && cd ${XDG_VIDEOS_DIR:-$HOME/Videos} || cd $(dirname -- "$1")
@@ -38,8 +39,9 @@ colorize () {
 }
 
 _yt-dlp() {
-	read -p "\"Live stream\"? (y/N) " live
-	[[ $live == [yY]* ]] && usets='--downloader ffmpeg --hls-use-mpegts'
+	#read -p "\"Live stream\"? (y/N) " live
+	#[[ $live == [yY]* ]] && usets='--downloader ffmpeg --hls-use-mpegts'
+	[[ -n $islive ]] && usets='--downloader ffmpeg --hls-use-mpegts'
 
 	yt-dlp $usets "$@"
 }
