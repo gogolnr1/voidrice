@@ -1,0 +1,19 @@
+#!/bin/sh
+# scraps greenclip clipboard manager for youtube links and send them to yt-dlp alltogether
+
+getclipboardstream() {
+	local stream=( $( greenclip print ) )
+	local i=0
+	local chunk="${stream[$i]}"
+	local list=
+	until [[ -z $chunk ]]; do
+		[[ $chunk =~ ^.*youtu.*$ ]] && list+=" ${stream[$i]}" && i=$(( i+1 )) && chunk="${stream[$i]}" || unset chunk
+	done
+	echo $list
+}
+
+ARGS="$@"
+CLIP="$( getclipboardstream )"
+
+yt-dlp "$@" $CLIP
+exit 0
