@@ -21,6 +21,11 @@ se() {
 	choice="$(find ~/.local/bin -mindepth 1 -printf '%P\n' | fzf)"
 	[ -f "$HOME/.local/bin/$choice" ] && $EDITOR "$HOME/.local/bin/$choice"
 	;}
+lg() {
+	git rev-parse 2>/dev/null;
+	[ ! $? = 0 ] && cd $REPOSITORIES/voidrice
+	lazygit
+	;}
 
 # Verbosity and settings that you pretty much just always are going to want.
 #rm="rm -vI" \
@@ -30,7 +35,6 @@ alias \
 	rm="rmo" \
 	bc="bc -ql" \
 	rsync="rsync -vrPlu" \
-	mkd="mkdir -pv" \
 	yts="ytd --write-subs --sub-langs 'en,de'" \
 	yta3="yta --audio-format mp3" \
 	yt="yt-dlp --embed-metadata -i" \
@@ -70,8 +74,10 @@ alias \
 	pbpaste="xclip -selection clipboard -o" \
 	unsorted="note --unsorted" \
 	daily="note --daily" \
-	mp="ncmpc --host=127.0.0.1 --port=6600"
+	mp="ncmpc --host=127.0.0.1 --port=6600" \
 	lf="lfub" \
 	magit="nvim -c MagitOnly" \
 	ref="shortcuts >/dev/null; source ${XDG_CONFIG_HOME:-$HOME/.config}/shell/shortcutrc ; source ${XDG_CONFIG_HOME:-$HOME/.config}/shell/zshnameddirrc" \
 	weath="less -S ${XDG_CACHE_HOME:-$HOME/.cache}/weatherreport" \
+	ld="lazydocker" \
+	snippets="vim .local/share/larbs/snippets"
