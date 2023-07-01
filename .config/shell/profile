@@ -21,6 +21,7 @@ export BROWSER="librewolf"
 # export WTTRURL="wttr.in"
 
 export KB_DIRECTORY="$HOME/Notes"
+export REPOSITORIES="$HOME/Repositories"
 
 # ~/ Clean-up:
 export XDG_CONFIG_HOME="$HOME/.config"
