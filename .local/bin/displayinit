@@ -17,7 +17,9 @@ export QT_AUTO_SCREEN_SCALE_FACTOR=1
 newdpi=$(($SCREEN_DPI * $GDK_SCALE))
 
 # xrandenv is declared in .bashrc file
-xrandr --dpi $newdpi $( source $HOME/.bashrc && xrandrenv )
+xrandr --dpi $newdpi
+[ -f ${LOCAL_CONFIG}/.nvidia-xinit ] &&
+	sh ${LOCAL_CONFIG}/.nvidia-xinit
 
 xrdb ${XDG_CONFIG_HOME:-$HOME/.config}/x11/xresources &&
 	echo "Xft.dpi: $newdpi" | xrdb -merge
