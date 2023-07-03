@@ -1,0 +1,30 @@
+#!/bin/bash
+
+case $1 in
+	--source) shift && what='sources' ;;
+	*) what='sinks' ;;
+esac
+
+if [[ -z $1 ]]; then
+	devices=$(pactl list short $what | awk '{print $1,$2}')
+	newDevice=$(echo "$devices" | dxf "$what:" | cut '-d ' -f1)
+	[[ $? = 1 ]] && exit 1
+else
+	newDevice="$1"
+fi
+
+pactl list short $what|while read stream; do
+	streamId=$(echo $stream|cut '-d ' -f1)
+	echo "moving stream $streamId"
+	if [[ $what = 'sources' ]]; then
+		pactl move-source-output "$streamId" "$newDevice"
+	else
+		pactl move-sink-input "$streamId" "$newDevice"
+	fi
+done
+
+if [[ $what = 'sources' ]]; then
+	pactl set-default-source "$newDevice"
+else
+	pactl set-default-sink "$newDevice"
+fi
