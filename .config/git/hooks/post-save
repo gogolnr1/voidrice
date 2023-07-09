@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Set the folder path to monitor
+folder=".local/bin"
+
+# Change to the repository root directory
+cd "$(git rev-parse --show-toplevel)" || exit
+
+# Monitor the folder for file modifications
+inotifywait -m -r -e close_write "$folder" |
+while read -r directory event file; do
+  # Check if the event is for a regular file
+  if [[ -f "$file" ]]; then
+    # Add the new file to the Git staging area
+    git add "$file"
+    echo "New contentfor $file."
+  fi
+done
