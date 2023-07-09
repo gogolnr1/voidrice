@@ -8,11 +8,6 @@ capitalize() {
   printf '%s' "$1" | tail -c '+2'
 }
 
-# notify-send wrapper exn
-exn() {
-	[[ -n $terminal ]] && echo "$@" || notify-send -- "$@"
-}
-
 [[ -z $KB_DIRECTORY ]] &&
 	exn "Please set global 'KB_DIRECTORY' variable" && exit 1
 

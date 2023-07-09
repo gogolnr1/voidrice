@@ -14,7 +14,9 @@ for command in mount umount sv pacman updatedb su shutdown poweroff reboot brigh
 done; unset command
 
 mkd() { mkdir -pv "$@" && cd "$@"; }
-nv() { cd "$(nova-air)" }
+exn() { [[ -t 1 ]] && echo "$@" || notify-send -- "$@" }
+dxf() {	[[ -t 1 ]] && shift && fzf $@ || dmenu -i -l 30 -p $@ }
+am() { cd "$(android-mount)" }
 rmo() { rmn "$@" }
 cpstat() { time rsync -a --info=progress2 --stats $1 $2 }
 se() {
