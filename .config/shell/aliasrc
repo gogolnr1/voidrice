@@ -30,7 +30,6 @@ lg() {
 # Verbosity and settings that you pretty much just always are going to want.
 #rm="rm -vI" \
 alias \
-	cp="cp -iv" \
 	mv="mv -iv" \
 	rm="rmo" \
 	bc="bc -ql" \
