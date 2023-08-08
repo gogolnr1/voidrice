@@ -32,6 +32,8 @@ set noruler
 set laststatus=0
 set noshowcmd
 
+hi Normal ctermbg=black
+
 " Some basics:
 	nnoremap c "_c
 	set nocompatible
