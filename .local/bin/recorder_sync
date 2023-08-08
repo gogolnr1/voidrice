@@ -1,0 +1,10 @@
+#!/bin/sh
+
+recorder_src=$HOME/mounts/WS-853
+recorder_dst=$HOME/Documents/Vioce\ Recorder
+
+sync_recorder() {
+	 rsync -av --remove-source-files $recorder_src $recorder_dst
+}
+
+sync_recorder
