@@ -9,9 +9,9 @@ if [[ $1 = clear ]] ; then
 fi
 
 # Truncated demenu printout with line numbers
-index=$(greenclip print | grep -E -on "^.{0,100}" - | dmenu -i -l 40 | sed 's/:.*//')
+index=$(greenclip print | grep -E -on "^.{0,200}" - | dmenu -i -l 40 | sed 's/:.*//')
 [[ -z $index ]] && exit 0
 
 # Aquiring full clipboard content of selection
 # sed filters by line number, xargs preserves line breaks
-greenclip print | sed -n "$index p" | xargs -r -d'\n' -I '{}' greenclip print '{}' 
+greenclip print | sed -n "$index p" | xargs -r -d'\n' -I '{}' greenclip print '{}'
