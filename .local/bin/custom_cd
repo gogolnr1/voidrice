@@ -1,7 +1,0 @@
-#!/bin/shell
-# If the directory name starts with a capital letter,
-# recursively look down the parents directories until the folder is found,
-# else it will just execute the normal cd command
-[[ $1 =~ ^[[:upper:]] ]] &&
-	while [[ ! -d "$1" ]]; do cd ..; done && cd "$1" ||
-	cd $1

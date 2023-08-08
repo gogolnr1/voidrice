@@ -26,6 +26,22 @@ lg() {
 	[ ! $? = 0 ] && cd $REPOSITORIES/voidrice
 	lazygit
 	;}
+custom_cd() {
+	# If the directory name starts with a capital letter,
+	# recursively look down the parents directories until the folder is found,
+	# else use cd command as custom
+	[[ $1 =~ ^[[:upper:]] ]] &&
+		while [[ ! -d "$1" ]]; do cd ..; done && cd "$1" ||
+		cd $1
+
+	# If the current folder only has one subdirectory and no files,
+	# jump right into it, recursively up
+	while true; do
+		dircount=$(ls -l | grep -c '^d')
+		filecount=$(ls -l | grep -c '^-')
+		[ $dircount -eq 1 ] && [ $filecount -eq 0 ] && cd "$ls" || break
+	done
+}
 
 # Verbosity and settings that you pretty much just always are going to want.
 #rm="rm -vI" \
