@@ -9,6 +9,13 @@
 # - can be called via system keybindings, then asks for filename via dmenu prompt
 # - autocompletes with .mp4 if no suffix is given
 # - also accepts curl calls
+#
+# Note to myself:
+# - Copy the link
+# - Hit the shortcut
+# - Display youtube link or file name in dmenu
+# - Edit it, hit enter
+# - Open a cwget instance on pane 9
 
 # if not executed from terminal ask for filename via dmenu
 if [[ $TERM = linux ]]; then
@@ -79,6 +86,8 @@ case $get_url in
 		exit 0
 	;;
 esac
+
+[[ -n $ytbraw ]] && get_url=${get_url%%?list*}
 
 # try to guess filename from 2nd last entry of clipboard history using greenclip
 cd - &> /dev/null
