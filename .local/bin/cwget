@@ -87,6 +87,7 @@ case $get_url in
 	;;
 esac
 
+# remove list parameter from url to prevent downloading whole playlist
 [[ -n $ytbraw ]] && get_url=${get_url%%?list*}
 
 # try to guess filename from 2nd last entry of clipboard history using greenclip
