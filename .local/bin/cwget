@@ -49,8 +49,16 @@ _yt-dlp() {
 	#read -p "\"Live stream\"? (y/N) " live
 	#[[ $live == [yY]* ]] && usets='--downloader ffmpeg --hls-use-mpegts'
 	[[ -n $islive ]] && usets='--downloader ffmpeg --hls-use-mpegts'
+	[[ -z $filename ]] && filename=$(yt-dlp --print filename "$get_url")
 
-	yt-dlp $usets "$@"
+	yt-dlp --embed-metadata -i $usets "$@" -o "$filename"
+
+	# recreate accessed and modified timestamp
+	touch -a -m "$filename"
+}
+
+respect_date() {
+	touch -a -m $filename
 }
 
 overwrite () {
@@ -77,8 +85,8 @@ get_url=$(xclip -selection clipboard -o -print0)
 
 # determine which tool to use
 case $get_url in
- 	*".m3u8"*) ytbts=1 ;;
-	*"youtu"*) ytbts=1 && ytbraw=1 ;;
+ 	*".m3u8"*) m3u8=1 ;;
+	*"youtu"*) m3u8=1 && ytbraw=1 ;;
 	"curl "*) crl=1 ;;
 	"http"* ) wgt=1 ;;
 	*       )
@@ -114,24 +122,15 @@ if [[ $(printf "%s\n" "${files[@]}" | wc -l) -gt 0 ]]; then
 	fi
 fi
 
-# if filename not empty & without file extension
+# if filename not empty & without file extension, fill in mp4 extension
 [ -n "${filename}" ] && [ "$filename" == "${filename##*.mp4}" ] &&
 	filename="$filename.mp4"
 
-# if filename not given just use yt-dlp and exit
-[[ -z "$filename" ]] && _yt-dlp --embed-metadata -i "$get_url" && exit 0
+# if filename not given or is m3u8, use yt-dlp and exit
+[[ -z "$filename" ]] || [[ -n $m3u8 ]] && _yt-dlp "$get_url" && exit 0
 
 # if file exists ask to continue or to overwrite file
 [[ -f "$filename" ]] && overwrite "$filename"
-
-# use youtube-dl
-[[ -n $ytbts ]] && _yt-dlp ${usets} "$get_url" -o "$filename" && exit 0
-
-[[ -n $ffmpeg ]] && \
-	cat $get_url | \
-		ffmpeg -protocol_whitelist file,http,https,tcp,tls \
-		       -allowed_extensions ALL -i - \
-		       -bsf:a aac_adtstoasc -c copy "$filename" && exit 0
 
 # use curl (actually translating to wget syntax)
 if [[ -n $crl ]] ; then
