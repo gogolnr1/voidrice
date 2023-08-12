@@ -45,6 +45,7 @@ custom_cd() {
 
 # Verbosity and settings that you pretty much just always are going to want.
 #rm="rm -vI" \
+#yt="yt-dlp --embed-metadata -i" \
 alias \
 	mv="mv -iv" \
 	rm="rmo" \
@@ -52,7 +53,6 @@ alias \
 	rsync="rsync -vrPlu" \
 	yts="ytd --write-subs --sub-langs 'en,de'" \
 	yta3="yta --audio-format mp3" \
-	yt="yt-dlp --embed-metadata -i" \
 	yta="yt -x -f bestaudio/best" \
 	ytt="yt --skip-download --write-thumbnail" \
 	ffmpeg="ffmpeg -hide_banner"
