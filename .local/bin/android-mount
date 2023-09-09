@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Set the mount point directory
+mount_dir="$HOME/.local/run/android-device"
+root_dir="Internal\ shared\ storage"
+
+# Create the mount point directory if it doesn't exist
+mkdir -p "$mount_dir"
+
+# Unmount the device if it is already mounted
+if grep -qs "$mount_dir" /proc/mounts; then
+  fusermount -u "$mount_dir"
+fi
+
+# Mount the Android device
+jmtpfs "$mount_dir"
+
+# Check if the mount was successful
+if [ $? -eq 0 ]; then
+  notify-send "Android device mounted at: $mount_dir"
+  echo "$mount_dir/$root_dir"
+else
+  notify-send "Failed to mount Android device."
+  echo "."
+fi

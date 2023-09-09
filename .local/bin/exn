@@ -1,0 +1,4 @@
+#!/bin/shell
+# simple echo/notify-send wrapper
+
+[[ -t 1 ]] && echo "$@" || notify-send -- "$@"

@@ -1,5 +1,8 @@
 #!/bin/sh
 
+[ -f ${LOCAL_CONFIG}/.nvidia-xinit ] && sh ${LOCAL_CONFIG}/.nvidia-xinit
+[ -f ${LOCAL_CONFIG}/.monitors-xinit ] && sh ${LOCAL_CONFIG}/.monitors-xinit
+
 export HI_DPI_FACTOR=2
 
 [[ -z $SCREEN_DPI ]] && export SCREEN_DPI=72
@@ -16,11 +19,8 @@ export QT_AUTO_SCREEN_SCALE_FACTOR=1
 
 newdpi=$(($SCREEN_DPI * $GDK_SCALE))
 
-xrandr --dpi $newdpi \
-       --setprovideroutputsource modesetting NVIDIA-0 \
-       --output eDP-1-1 --primary --mode 2880x1620 --pos 0x0 --rotate normal \
-       --output DP-1-3-1 --off
-	
+xrandr --dpi $newdpi
+
 xrdb ${XDG_CONFIG_HOME:-$HOME/.config}/x11/xresources &&
 	echo "Xft.dpi: $newdpi" | xrdb -merge
 

@@ -69,7 +69,7 @@ _gpg_keys() {
 
   if [[ $1 = --backup ]]; then
     mkdir -p ${BACKUP_STICK2}/gnupg
-    
+
     [[ -v hot ]] &&
       gpg --export-ownertrust > ${BACKUP_STICK2}/gnupg/trustdb-backup.txt
           echo "Ownertrust exported."
@@ -136,7 +136,7 @@ stick_to_stick () {
 backup_music () {
   printf "\nmusic:\n"
   if [ -d "$HOME_DIR/Music" ] && [ -d "$BACKUP_DATA2" ]; then
-    _rsync ${rsync_arguments_media} ${MUSIC_DIR} ${BACKUP_DATA2}/
+    _rsync ${rsync_arguments_media} ${HOME_DIR}/Music/ ${BACKUP_DATA2}/Musik
   fi
 }
 
@@ -158,16 +158,14 @@ backup_movies () {
   local videos_filter="${HOME_DIR}/.local/share/voidrice/sync_resources/videos_filter.txt"
   if [ -d "$HOME_DIR/Videos" ]; then
     [ -d "$BACKUP_DATA2" ] && local backupdir=${BACKUP_DATA2}
-      #_rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA2}/Videos
     [ -d "$BACKUP_DATA1" ] && local backupdir=${BACKUP_DATA1}
-      #_rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA1}/Videos
 
     if [ -n $backupdir ]; then
       _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${backupdir}/Videos
 
       read -p 'Clear Movies? ' clearm
       if [[ $clearm == "y" ]]; then
-        _rsync ${rsync_arguments_media} --delete --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/Movies ${backupdir}/Videos/Movies
+        _rsync ${rsync_arguments_media} --delete --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/Movies/ ${backupdir}/Videos/Movies
       fi
     fi
   fi

@@ -1,0 +1,4 @@
+#!/bib/bash
+source `which comma`
+
+#curl -H 'Content-Type: application/json' -H 'Accept: application/json'  https://www.googleapis.com/gmail/v1/users/<email_id>/messages?access_token=<GOOGLE_TOKEN>

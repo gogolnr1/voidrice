@@ -8,9 +8,8 @@ capitalize() {
   printf '%s' "$1" | tail -c '+2'
 }
 
-exn() {
-	[[ -n $terminal ]] && echo "$@" || notify-send -- "$@"
-}
+[[ -z $KB_DIRECTORY ]] &&
+	exn "Please set global 'KB_DIRECTORY' variable" && exit 1
 
 ARGS=()
 while [[ $# -gt 0 ]]; do
@@ -32,7 +31,7 @@ nowtime=$(date +"%H-%M-%S");
 [ -t 1 ] && [ "$TERM" != 'linux' ] &&
 	terminal=true
 
-if [[ -n $daily ]]; then 
+if [[ -n $daily ]]; then
 	subfolder="Calendar"
 	filename="$nowdate.md"
 	noteprefix="- "
@@ -70,7 +69,7 @@ fi
 # if image source given then declare name and path
 # and write it into vault
 if [[ -n $image ]]; then
-	[[ -n $content ]] && 
+	[[ -n $content ]] &&
 		imagename="$nowdate $content.png" ||
 		imagename="$nowdate-$nowtime.png"
 	imagepath="$attachements/$imagename"
@@ -82,7 +81,7 @@ if [[ -n $image ]]; then
 		xclip -selection clipboard < /dev/null
 
 	# if file location given, copy it into vault
-	[[ -n $istmp ]] && 
+	[[ -n $istmp ]] &&
 		mv $tmpimgpath "$imagepath"
 fi
 
@@ -90,12 +89,12 @@ fi
 # else if text contains link then create new note with link to be scraped
 # else if only text is set then insert checkbox with text
 if [[ -z $content ]] && [[ -z $image ]]; then
-	nvim "$entrypath/$subfolder/$filename"
+	nvim "$filepath"
 elif [[ $content =~ ^https?://.* ]]; then
 	echo $"- Scrap [$content]" >> "$filepath" &&
 		finish=true
 elif [[ -n $content ]]; then
-	echo $"$noteprefix$content" >> "$filepath" && 
+	echo $"$noteprefix$content" >> "$filepath" &&
 		finish=true
 fi
 

@@ -1,19 +1,19 @@
 #!/bin/sh
 
-export SCREEN_DPI=102
 export SUDO_ASKPASS="$HOME/.local/bin/dmenupass"
+
+[ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc"
 
 # This file runs when a DM logs you into a graphical session.
 # If you use startx/xinit like a Chad, this file will also be sourced.
 
 displayinit #& xrdbpid=$!	# X related monitor settings (requires global SCREEN_DPI value)
-remaps &			# run the remaps script, switching caps/esc and more; check it for more info
 greenclip daemon &
 
-autostart="mpd xcompmgr dunst unclutter pipewire"
+autostart="mpd xcompmgr dunst unclutter pipewire remapd"
 
 for program in $autostart; do
-	pidof -s "$program" || "$program" &
+	pidof -sx "$program" || "$program" &
 done >/dev/null 2>&1
 
 # Ensure that xrdb has finished running before moving on to start the WM/DE.

@@ -1,0 +1,7 @@
+#!/bin/sh
+# simple fzf/dmenu wrapper depending on $TERM state
+
+if [[ $TERM != linux ]]
+	then shift && fzf $@
+	else dmenu -i -l 30 -p $@
+fi

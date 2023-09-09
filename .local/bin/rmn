@@ -11,17 +11,17 @@ shared_storage="Internal shared storage"
 count=${#lines[@]}
 
 # if current dir is Nova backup dir and device is mounted, then ask for deletion on device
-# else perform normal rm 
+# else perform normal rm
 rmx() {
 	# baaad practice. files to be deleted have to be checked if in NOVA_DOCS and not pwd from bash
 	# read $@ line; do [[ $(base $line) == "$NOVA_DOCS"* ]] && is_nova_dir=true; done
-	[[ $PWD = $NOVA_DOCS/* ]] && is_nova_dir=true
+	[[ -n $NOVA_DOCS ]] && [[ $PWD = $NOVA_DOCS/* ]] && is_nova_dir=true
 
 	# remember subfolders of DOCS
 	# $nova_file_list=$(ls $@ | grep $NOVA_DOCS | perl -pi -e "s/$NOVA_DOCS\///g")
 
 	# if nova not mounted then ask to mount
-	[[ -n $is_nova_dir ]] && 
+	[[ -n $is_nova_dir ]] &&
 	while [[ -z $check ]]; do
 		if $(mountpoint -q "$NOVA_MOUNT") &&
 		[[ -d $NOVA_MOUNT/$shared_storage ]]; then
@@ -54,7 +54,7 @@ rmx() {
 	# then jump into remote dir
 	# and delete remotely
 	rm -v "$@" && [[ -n $delete ]] && \
-		# baaad practice as above don't take PWD. 
+		# baaad practice as above don't take PWD.
 		# cd $NOVA_MOUNT && rm $nova_file_list
 		# jump into MOUNT/shared_storage and rm to subfolders
 		cd "${PWD//$NOVA_DOCS/$NOVA_MOUNT/$shared_storage}" && \
@@ -64,9 +64,9 @@ rmx() {
 # if argument is not directory
 # and argument is number
 # and numer is in rage, then delete by number
-if [[ ! -d $1 ]] && 
-   [[ "$1" =~ ^[0-9]+$ ]] && 
-   (("$1" >= 1 && "$1" <= $count)); then 
+if [[ ! -d $1 ]] &&
+   [[ "$1" =~ ^[0-9]+$ ]] &&
+   (("$1" >= 1 && "$1" <= $count)); then
 	dest="${lines_nc[(($1-1))]}"
 	q=$(printf "${BIRed}${dest}${NC}")
 	[[ -d "$dest" ]] && p="folder " && r="-r"
@@ -76,4 +76,3 @@ if [[ ! -d $1 ]] &&
 fi
 
 rmx -I "$@"
-

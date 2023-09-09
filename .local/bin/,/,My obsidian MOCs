@@ -1,0 +1,4 @@
+#!/bib/bash
+source `which comma`
+
+# List my youtube subscriptions here

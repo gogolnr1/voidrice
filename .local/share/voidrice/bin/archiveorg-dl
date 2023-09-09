@@ -1,13 +1,63 @@
 #!/usr/bin/env bash
+# Downloads a book borrowed at archive.org
+#
+# Makes use of:
+# - knock (https://github.com/esn/knock) to convert ACSM files to DRM-free files
+# - xmlstarlet to extract book title from ACSM file
+# - xclip (optional) to get identifier from clipboard, so you can just run `archoveorg-dl`
+#
+# Usage:
+# - log in at archive.org with your default browser
+# - borrow a book at archive.org
+# - copy the book identifier (https://archive.org/details/< IDENTIFIER >)
+# - run the command `archiveorg-dl "< IDENTIFIER >"` (opens a browser window/tab to download the ACSM file)
+# - save the ASCM file in your ~/Downloads directory
+# - let the script do its magick
 
-[[ -n $1 ]] && aid="$1" || aid="$(xclip -s c -o print0)"
-echo "$url"
-echo "opening..."
-xdg-open "https://archive.org/services/loans/loan/?action=media_url&identifier=$aid&format=pdf&redirect=1" > /dev/null 2>&1
-exit 0
+hash knock 2>/dev/null || { echo "command knock not installed" >&2; exit 1; }
+hash xmlstarlet 2>/dev/null || { echo "command xmlstarlet not installed" >&2; exit 1; }
 
-echo "url to enter in your browser when you are logged in to archive.org:"
-echo "$url"
-echo ""
-echo "Then go to the following git repo and download that amazing tool, which downloads the DRM file from Adobe and de-DRMs it:"
-echo "https://github.com/BentonEdmondson/knock"
+downloaddir="$HOME/Downloads"
+documentsdir="$HOME/Documents"
+acsmfile="URLLink.acsm"
+
+[[ -n $1 ]] && aid="$1" || aid="$(hash xclip 2>/dev/null && xclip -selection clipboard -o -print0)"
+[[ -z $aid ]] && { echo "no identifier given" >&2; exit 1; }
+
+if [[ -f "$downloaddir/$acsmfile" ]]; then
+	read -p "The file $downloaddir/$acsmfile already exists. [D]elete or use [e]xisting file? (D/e) " whattodo
+	[[ $whattodo == [eE]* ]] && skipdownload=true || rm -f "$downloaddir/$acsmfile"
+fi
+
+if [[ -z $skipdownload ]]; then
+	printf "Your browser will now open a new instance to download the '$acsmfile' file. Save that file into $downloaddir.\n"
+	read -p "Press Enter to continue... " </dev/tty
+
+	url="https://archive.org/services/loans/loan/?action=media_url&identifier=$aid&format=pdf&redirect=1"
+	echo "Opening URL $url" && xdg-open "$url" > /dev/null 2>&1 & disown
+
+	printf "Waiting for $acsmfile in $downloaddir ..."
+	until [ -f "$downloaddir/$acsmfile" ]
+	do
+	     sleep 1
+	     printf "%0.s."
+	done && echo " found"
+fi
+
+booktitle=`xmlstarlet sel -t -v '//*[local-name()="title"][text()]' -nl "$downloaddir/$acsmfile" 2>/dev/null`
+[[ -z $booktitle ]] && echo "No title found. Using identifier as filename..." && booktitle="$aid"
+
+knock "$downloaddir/$acsmfile" &&
+	rm -f "$downloaddir/$acsmfile"
+
+createdfile=$( ls "$downloaddir/${acsmfile%.*}."* )
+if [[ -f $createdfile ]]; then
+	destination="$documentsdir/$booktitle"
+	extension="${createdfile##*.}"
+
+	mv -iv "$downloaddir/${acsmfile/.acsm/.$extension}" "$destination.$extension"
+
+	echo "Your document has been saved here: $destination.$extension"
+else
+	echo 'Something went wrong.'
+fi

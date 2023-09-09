@@ -1,0 +1,19 @@
+#!/bin/sh
+# opens the default browser with all urls saved in specific directory of bookmarks
+
+source `which browser-dbs`
+
+if [[ -n $dbPath ]]; then
+	cp -f $dbPath /tmp/h
+
+	BOOKMARKDIR='keep open'
+
+	QUERY="SELECT '-url ' || moz_places.url
+		FROM  moz_bookmarks, (SELECT moz_bookmarks.id from moz_bookmarks
+		WHERE moz_bookmarks.title == '$BOOKMARKDIR' AND moz_bookmarks.fk IS NULL) tag
+		LEFT OUTER JOIN moz_places
+		ON moz_places.id == moz_bookmarks.fk
+		WHERE moz_bookmarks.parent == tag.id"
+
+	$BROWSER $( sqlite3 /tmp/h "$QUERY" )
+fi

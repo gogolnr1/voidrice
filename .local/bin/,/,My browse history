@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+#todo: add date/time to list
+source `which comma`
+source `which browser-dbs`
+COLS=30
+SEP='{::}'
+
+_snatch_hist() {
+	if [[ $BROWSER = brave ]]; then
+		query="select substr(title, 1, $COLS), url
+			from urls
+			order by last_visit_time desc"
+	elif [[ $BROWSER = @(firefox|librewolf) ]]; then
+		query="select substr(p.title, 1, $COLS), p.url
+			from moz_historyvisits as h, moz_places as p
+			where p.id == h.place_id
+			order by h.visit_date desc"
+	fi
+
+	if [[ -n $dbPath ]]; then
+		cp -f $dbPath /tmp/h
+
+		url=$( sqlite3 -separator $SEP /tmp/h "$query" |
+			awk '!a[$0]++' | # catch duplicates
+			awk -F $SEP '{printf "%-'$COLS's  %s\n", $1, $2}' |
+			dxf "History:" |
+			sed 's#.*\(https*://\)#\1#')
+
+		[[ -n $url ]] && $BROWSER "$url"
+	fi
+}
+
+_snatch_hist

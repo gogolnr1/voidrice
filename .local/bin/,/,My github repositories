@@ -1,0 +1,14 @@
+#!/bin/bash
+source `which comma`
+
+USERNAME=gogolnr1
+TOKEN=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
+
+# User base URL
+BASEURL="https://api.github.com/user/$USERNAME/repos"
+
+REPO=$( curl -H "Authorization: token $TOKEN" https://api.github.com/users/$USERNAME/repos | 
+		jq '.[]| [.name]| @csv' | tr -d '\\"' | 
+		dxf "Repos:" )
+
+[[ -n $REPO ]] && $BROWSER "https://github.com/$USERNAME/$REPO"
