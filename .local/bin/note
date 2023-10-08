@@ -50,7 +50,7 @@ fi
 # append to last note else create new file
 if [[ $content = ++ ]] && [[ -z $filename ]]; then
 	# get filename of last created file
-	filename=$(find "$entrypath/$subfolder" -type f -printf "%T@ %f\n" | sort | cut -d' ' -f2 | tail -n1)
+	filename=$(find "$entrypath/$subfolder" -type f -printf "%T@ %f\n" | sort | cut -d' ' -f2-99 | tail -n1)
 	unset content
 else
 	[[ -z $content ]] && content="Content $nowtime-$nowdate"
