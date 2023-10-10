@@ -3,14 +3,17 @@
 # .local/share/voidrice gitify
 # yandex-disk & dropbox
 
+readonly BACKUP_LARGE="800G-GRAUGEAR 500G-VERBATIM"
+for device in $BACKUP_LARGE; do
+	[[ -d /run/mount/usb/$device ]] &&
+		BACKUP_DATA="/run/mount/usb/$device" && continue
+done
+
 readonly HOME_DIR="/home/$USER"
 readonly MUSIC_DIR="/run/mount/41G-PART/Musik"
 
 readonly BACKUP_STICK1="/run/mount/usb/32G-SANDISK"
 readonly BACKUP_STICK2="/run/mount/usb/16G-VERBATIM"
-
-#readonly BACKUP_DATA1="/run/mount/41G-PART" #50GB-PART
-readonly BACKUP_DATA2="/run/mount/usb/800G-GRAUGEAR" #1TB-GRAYGEAR
 
 readonly BACKUP_MTP1="$HOME_DIR/.local/run/mount/nova-air"
 readonly GPG_NAMES=( 'AEA64026B34D3924C225ED6E259B91BF34A53F38' )
@@ -19,8 +22,7 @@ readonly GPG_NAMES=( 'AEA64026B34D3924C225ED6E259B91BF34A53F38' )
 while test $# -gt 0
 do
     case "$1" in
-        restore) restore=1
-            ;;
+        restore) restore=1 ;;
         hot) hot=1 ;;
         -d|--documents) docs=1 ;;
         -b|--books)     books=1 ;;
@@ -104,7 +106,7 @@ backup_home () {
   local home_filter="${HOME_DIR}/.local/share/voidrice/sync_resources/home_filter.txt"
   local home_excludes="${HOME_DIR}/.local/share/voidrice/sync_resources/home_excludes.txt"
 
-  [ -d "$BACKUP_STICK1" ] && bs="$BACKUP_STICK1" || bs="$BACKUP_DATA2/BACKUP_STICK"
+  [ -d "$BACKUP_STICK1" ] && bs="$BACKUP_STICK1" || bs="$BACKUP_DATA/BACKUP_STICK"
   if [ -d "$bs" ]; then
     _rsync ${rsync_arguments_home} --filter="merge ${home_filter}" $HOME_DIR/ ${bs}/B
 	#--exclude="${HOME_EXCLUDES}" \
@@ -128,15 +130,15 @@ stick_to_stick () {
     _rsync ${rsync_arguments_home} --exclude-from="${excludes}" $BACKUP_STICK1 $BACKUP_STICK2
   fi
 
-  if [ -d "$BACKUP_STICK1" ] && [ -d "$BACKUP_DATA2" ]; then
-    _rsync ${rsync_arguments_home} --exclude-from="${excludes}" $BACKUP_STICK1/ $BACKUP_DATA2/BACKUP_STICK
+  if [ -d "$BACKUP_STICK1" ] && [ -d "$BACKUP_DATA" ]; then
+    _rsync ${rsync_arguments_home} --exclude-from="${excludes}" $BACKUP_STICK1/ $BACKUP_DATA/BACKUP_STICK
   fi
 }
 
 backup_music () {
   printf "\nmusic:\n"
-  if [ -d "$HOME_DIR/Music" ] && [ -d "$BACKUP_DATA2" ]; then
-    _rsync ${rsync_arguments_media} ${HOME_DIR}/Music/ ${BACKUP_DATA2}/Musik
+  if [ -d "$HOME_DIR/Music" ] && [ -d "$BACKUP_DATA" ]; then
+    _rsync ${rsync_arguments_media} ${HOME_DIR}/Music/ ${BACKUP_DATA}/Musik
   fi
 }
 
@@ -146,9 +148,9 @@ backup_documents () {
     if [ -d "$BACKUP_STICK1" ]; then
       _rsync ${rsync_arguments_home} ${HOME_DIR}/Documents/ ${BACKUP_STICK1}/D
       _rsync ${rsync_arguments_home} ${HOME_DIR}/Pictures/ ${BACKUP_STICK1}/P
-    elif [ -d "$BACKUP_DATA2" ]; then
-      _rsync ${rsync_arguments_home} ${HOME_DIR}/Documents/ ${BACKUP_DATA2}/BACKUP_STICK/D
-      _rsync ${rsync_arguments_home} ${HOME_DIR}/Pictures/ ${BACKUP_DATA2}/BACKUP_STICK/P
+    elif [ -d "$BACKUP_DATA" ]; then
+      _rsync ${rsync_arguments_home} ${HOME_DIR}/Documents/ ${BACKUP_DATA}/BACKUP_STICK/D
+      _rsync ${rsync_arguments_home} ${HOME_DIR}/Pictures/ ${BACKUP_DATA}/BACKUP_STICK/P
     fi
   fi
 }
@@ -157,15 +159,13 @@ backup_movies () {
   printf "\nmovies:\n"
   local videos_filter="${HOME_DIR}/.local/share/voidrice/sync_resources/videos_filter.txt"
   if [ -d "$HOME_DIR/Videos" ]; then
-    [ -d "$BACKUP_DATA2" ] && local backupdir=${BACKUP_DATA2}
-    [ -d "$BACKUP_DATA1" ] && local backupdir=${BACKUP_DATA1}
 
-    if [ -n $backupdir ]; then
-      _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${backupdir}/Videos
+    if [ -d $BACKUP_DATA ]; then
+      _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA}/Videos
 
       read -p 'Clear Movies? ' clearm
       if [[ $clearm == "y" ]]; then
-        _rsync ${rsync_arguments_media} --delete --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/Movies/ ${backupdir}/Videos/Movies
+        _rsync ${rsync_arguments_media} --delete --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/Movies/ ${BACKUP_DATA}/Videos/Movies
       fi
     fi
   fi
@@ -175,11 +175,8 @@ backup_books () {
   printf "\nbooks:\n"
   local book_dirname="Calibre Library"
   if [ -d "$HOME_DIR/$book_dirname" ]; then
-    if [ -d "$BACKUP_DATA1" ]; then
-      _rsync ${rsync_arguments_media} "$HOME_DIR/$book_dirname" "$BACKUP_DATA1/"
-    fi
-    if [ -d "$BACKUP_DATA2" ]; then
-      _rsync ${rsync_arguments_media} "$HOME_DIR/$book_dirname" "$BACKUP_DATA2/"
+    if [ -d "$BACKUP_DATA" ]; then
+      _rsync ${rsync_arguments_media} "$HOME_DIR/$book_dirname" "$BACKUP_DATA/"
     fi
   fi
 }
