@@ -1,0 +1,5 @@
+#!/bin/sh
+
+this=$(xclip -selection clipboard -o -print0)
+
+yt-dlp --embed-metadata -i "$@" "$this"
