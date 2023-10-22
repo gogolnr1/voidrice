@@ -165,7 +165,7 @@ backup_movies () {
 
       read -p 'Clear Movies? ' clearm
       if [[ $clearm == "y" ]]; then
-        _rsync ${rsync_arguments_media} --delete --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/Movies/ ${BACKUP_DATA}/Videos/Movies
+        _rsync ${rsync_arguments_media} --remove-source-files --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/Movies/ ${backupdir}/Videos/Movies
       fi
     fi
   fi
