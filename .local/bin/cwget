@@ -67,7 +67,7 @@ _yt-dlp() {
 
 	yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mp4
 
-	# recreate accessed and modified timestamp
+	# recreate file timestamps
 	filename=$(ls -t "$filename"* | head -1)
 	touch -a -m "$filename"
 }
