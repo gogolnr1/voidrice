@@ -45,12 +45,27 @@ colorize () {
 	printf "${BI}$1${NC}"
 }
 
+set-yt-resolution() {
+	PS3="Enter a number: "
+
+	select resolution in best 144 240 360 480 720 1080 2160 abort
+	do
+		[[ -n $resolution ]] || { echo "Please try again." >&2; continue; }
+		break
+	done
+
+	[[ $resolution = abort ]] && exit 1
+	[[ $resolution = best ]] && resolution='' ||
+		resolution=" -S res:$resolution"
+}
+
 _yt-dlp() {
 	[[ -n $islive ]] && usets='--downloader ffmpeg --hls-use-mpegts'
 	[[ -z $filename ]] && filename=$(yt-dlp --print filename "$get_url")
 	[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs'
+	[[ -n "$ytbraw" ]] && set-yt-resolution || exit 1
 
-	yt-dlp --embed-metadata -i $subs $usets "$@" -o "$filename" --merge-output-format mp4
+	yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mp4
 
 	# recreate accessed and modified timestamp
 	filename=$(ls -t "$filename"* | head -1)
