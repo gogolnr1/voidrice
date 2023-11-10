@@ -38,7 +38,13 @@ else
 fi
 
 # replace some special characters with a dash
-urltitle=$( echo "$title" | perl -pe 's/[ :|]+/-/g' )
+urltitle=$( echo "$title" |
+	perl -pe 's/- //g' |
+	perl -pe 's/[ :|]+/-/g' |
+	perl -pe 's/ä/ae/g' |
+	perl -pe 's/ö/oe/g' |
+	perl -pe 's/ü/ue/g' )
+echo $urltitle
 
 episodesjson=$( curl -s "$BASEURL/serie/$urltitle/$season/$language" | pup 'table.episodes tr td:first-child a json{}' )
 next=$( echo "$episodesjson" | jq ". | nth($episode) | [.text, .title, .href] | @tsv" | tr -d '"')
