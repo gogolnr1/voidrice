@@ -6,7 +6,7 @@
 # check for backup devices to use
 readonly BACKUP_LARGE="800G-GRAUGEAR 500G-VERBATIM"
 for device in $BACKUP_LARGE; do
-	[[ -d /run/mount/usb/$device ]] &&
+	[[ -d /run/mount/usb/$device ]] && [[ $(df -h | grep "/run/mount/usb/$device") ]] &&
 		BACKUP_DATA="/run/mount/usb/$device" && continue
 done
 
