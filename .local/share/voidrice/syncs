@@ -162,15 +162,17 @@ backup_movies () {
   printf "\nmovies:\n"
   local videos_filter="${HOME_DIR}/.local/share/voidrice/sync_resources/videos_filter.txt"
   if [ -d "$HOME_DIR/Videos" ]; then
-
+    set -e
     if [ -d $BACKUP_DATA ]; then
       _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA}/Videos
 
       read -p 'Clear Movies? ' clearm
       if [[ $clearm == "y" ]]; then
-        _rsync ${rsync_arguments_media} --remove-source-files --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/Movies/ ${backupdir}/Videos/Movies
+        _rsync ${rsync_arguments_media} --remove-source-files ${HOME_DIR}/Videos/Movies/ ${BACKUP_DATA}/Videos/Movies && \
+		find ${BACKUP_DATA}/Videos/Movies/* -type d -empty -delete
       fi
     fi
+    set +e
   fi
 }
 
