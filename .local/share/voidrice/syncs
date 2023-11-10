@@ -19,6 +19,19 @@ readonly BACKUP_STICK2="/run/mount/usb/16G-VERBATIM"
 readonly BACKUP_MTP1="$HOME_DIR/.local/run/mount/nova-air"
 readonly GPG_NAMES=( 'AEA64026B34D3924C225ED6E259B91BF34A53F38' )
 
+# try to intelligently set action to be performed
+if [[ $# -eq 0 ]]; then
+  currentdir="${PWD#"$HOME"/}"
+  parentdir="${currentdir%%/*}"
+
+  case "$parentdir" in
+    Projects) projects=1 ;;
+    *) exit 0 ;;
+  esac
+
+  printf "Found specific sync folder \"$currentdir\".\n\n"
+fi
+
 # check options
 while test $# -gt 0
 do
@@ -254,14 +267,16 @@ backup_nova () {
 backup_projects () {
   printf "\nprojects:\n"
 
-  # limit file size for specific machine
-  [[ $(hostnamectl | grep 'Machine ID:' | awk '{print $NF}') = ff6915e5a88fcbb8152613cb61caf5ba ]] &&
-    more_arguments='--max-size=100M'
-
   if [ -d "$BACKUP_DATA" ]; then
-    if [ -d "$HOME_DIR/Projects" ]; then
-      _rsync ${rsync_arguments_projects} ${more_arguments} "${BACKUP_DATA}/Projects/" "${HOME_DIR}/Projects"
-      _rsync ${rsync_arguments_projects}                   "${HOME_DIR}/Projects/" "${BACKUP_DATA}/Projects"
+    [[ -v currentdir ]] && relpath="$currentdir" || relpath='Projects'
+
+    if [ -d "$HOME_DIR/$relpath" ]; then
+      # limit file size for specific machine
+      [[ $(hostnamectl | grep 'Machine ID:' | awk '{print $NF}') = ff6915e5a88fcbb8152613cb61caf5ba ]] &&
+        more_arguments='--max-size=100M'
+
+      _rsync ${rsync_arguments_projects} ${more_arguments} "${BACKUP_DATA}/${relpath}/" "${HOME_DIR}/${relpath}"
+      _rsync ${rsync_arguments_projects}                   "${HOME_DIR}/${relpath}/" "${BACKUP_DATA}/${relpath}"
     fi
   fi
 
