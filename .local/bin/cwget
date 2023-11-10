@@ -59,6 +59,11 @@ set-yt-resolution() {
 		resolution=" -S res:$resolution"
 }
 
+recreatetimestamp() {
+	filename=$(ls -t "$filename"* | head -1)
+	touch -a -m "$filename"
+}
+
 _yt-dlp() {
 	[[ -n $islive ]] && usets='--downloader ffmpeg --hls-use-mpegts'
 	[[ -z $filename ]] && filename=$(yt-dlp --print filename "$get_url")
@@ -67,9 +72,7 @@ _yt-dlp() {
 
 	yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mp4
 
-	# recreate file timestamps
-	filename=$(ls -t "$filename"* | head -1)
-	touch -a -m "$filename"
+	recreatetimestamp
 }
 
 overwrite () {
@@ -156,4 +159,5 @@ if [[ -n $wgt ]] ; then
 		[[ -f "$filename" ]] && wget_parms="-c"
 		eval "wget -T 5 $wget_parms $get_url -O '$filename' && break;"
 	done
+	recreatetimestamp
 fi
