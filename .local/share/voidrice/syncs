@@ -107,6 +107,7 @@ backup_home () {
   local home_excludes="${HOME_DIR}/.local/share/voidrice/sync_resources/home_excludes.txt"
 
   [ -d "$BACKUP_STICK1" ] && bs="$BACKUP_STICK1" || bs="$BACKUP_DATA/BACKUP_STICK"
+  [ ! -d "$BACKUP_STICK1" ] && mkdir "$BACKUP_DATA/BACKUP_STICK"
   if [ -d "$bs" ]; then
     _rsync ${rsync_arguments_home} --filter="merge ${home_filter}" $HOME_DIR/ ${bs}/B
 	#--exclude="${HOME_EXCLUDES}" \
@@ -138,7 +139,8 @@ stick_to_stick () {
 backup_music () {
   printf "\nmusic:\n"
   if [ -d "$HOME_DIR/Music" ] && [ -d "$BACKUP_DATA" ]; then
-    _rsync ${rsync_arguments_media} ${HOME_DIR}/Music/ ${BACKUP_DATA}/Musik
+    [ ! -d "$BACKUP_DATA/Music" ] && mkdir "$BACKUP_DATA/Music"
+    _rsync ${rsync_arguments_media} ${HOME_DIR}/Music/ ${BACKUP_DATA}/Music
   fi
 }
 
@@ -149,6 +151,7 @@ backup_documents () {
       _rsync ${rsync_arguments_home} ${HOME_DIR}/Documents/ ${BACKUP_STICK1}/D
       _rsync ${rsync_arguments_home} ${HOME_DIR}/Pictures/ ${BACKUP_STICK1}/P
     elif [ -d "$BACKUP_DATA" ]; then
+      [ ! -d "$BACKUP_DATA/BACKUP_STICK" ] && mkdir "$BACKUP_DATA/BACKUP_STICK"
       _rsync ${rsync_arguments_home} ${HOME_DIR}/Documents/ ${BACKUP_DATA}/BACKUP_STICK/D
       _rsync ${rsync_arguments_home} ${HOME_DIR}/Pictures/ ${BACKUP_DATA}/BACKUP_STICK/P
     fi
