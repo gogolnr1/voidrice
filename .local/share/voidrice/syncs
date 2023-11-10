@@ -24,7 +24,8 @@ while test $# -gt 0
 do
     case "$1" in
         restore) restore=1 ;;
-        hot) hot=1 ;;
+        dry) dry=1 ;;
+        wet) wet=1 ;;
         -d|--documents) docs=1 ;;
         -b|--books)     books=1 ;;
         -m|--music)     music=1 ;;
@@ -37,6 +38,27 @@ do
     esac
     shift
 done
+
+if [[ ! -v dry ]] && [[ ! -v wet ]]; then
+  PS3="Select action: "
+
+  select action in dry-run wet-swim quit; do
+    case $action in
+      dry-run)
+        dry=1 && break
+        ;;
+      wet-swim)
+        wet=1 && break
+        ;;
+      quit)
+        exit 0
+        ;;
+      *)
+        echo "Invalid option $REPLY"
+        ;;
+    esac
+  done
+fi
 
 # if none of the variables is set then sync all
 [[ -v home ]] ||\
@@ -70,7 +92,7 @@ rsync_arguments_restore="-aP --ignore-existing --exclude '.local/bin/'"
 _rsync () {
   rsync --dry-run "$@"
   rsync --dry-run "$@"|grep denied
-  [[ -v hot ]] && rsync "$@" || echo "$@"
+  [[ -v wet ]] && rsync "$@" || echo "$@"
 }
 
 _gpg_keys() {
@@ -79,12 +101,12 @@ _gpg_keys() {
   if [[ $1 = --backup ]]; then
     mkdir -p ${BACKUP_STICK2}/gnupg
 
-    [[ -v hot ]] &&
+    [[ -v wet ]] &&
       gpg --export-ownertrust > ${BACKUP_STICK2}/gnupg/trustdb-backup.txt
           echo "Ownertrust exported."
 
     for name in $GPG_NAMES; do
-      if [[ -v hot ]]; then
+      if [[ -v wet ]]; then
         gpg --export-secret-keys --armor ${name} > ${BACKUP_STICK2}/gnupg/${name}-backup.asc &&
           echo "$name key exported."
       else
