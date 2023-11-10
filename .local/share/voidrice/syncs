@@ -3,6 +3,7 @@
 # .local/share/voidrice gitify
 # yandex-disk & dropbox
 
+# check for backup devices to use
 readonly BACKUP_LARGE="800G-GRAUGEAR 500G-VERBATIM"
 for device in $BACKUP_LARGE; do
 	[[ -d /run/mount/usb/$device ]] &&
@@ -37,6 +38,7 @@ do
     shift
 done
 
+# if none of the variables is set then sync all
 [[ -v home ]] ||\
 [[ -v docs ]] ||\
 [[ -v books ]] ||\
@@ -115,7 +117,6 @@ backup_home () {
   [ ! -d "$BACKUP_STICK1" ] && mkdir "$BACKUP_DATA/BACKUP_STICK"
   if [ -d "$bs" ]; then
     _rsync ${rsync_arguments_home} --filter="merge ${home_filter}" $HOME_DIR/ ${bs}/B
-	#--exclude="${HOME_EXCLUDES}" \
 
     if [ -d "$HOME_DIR/../rstudio" ]; then
       _rsync ${rsync_arguments_home} $HOME_DIR/../rstudio/ ${bs}/B/home_rstudio
