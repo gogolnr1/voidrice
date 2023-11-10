@@ -34,6 +34,12 @@ custom_cd() {
 		while [[ ! -d "$1" ]]; do cd ..; done && cd "$1" ||
 		cd $1
 
+	# if a device is mounted then jump into its mount dir
+	if [[ ${PWD##*/} = mounts ]] && [[ -f .lastmount ]]; then
+		lastmount=$(tail -n 1 .lastmount)
+		[[ -n $lastmount ]] && [[ -d $lastmount ]] && cd "$lastmount"
+	fi
+
 	# If the current folder only has one subdirectory and no files,
 	# jump right into it, recursively up
 	while true; do
@@ -42,6 +48,7 @@ custom_cd() {
 		[ $dircount -eq 1 ] && [ $filecount -eq 0 ] && cd "$ls" || break
 	done
 }
+
 
 # Verbosity and settings that you pretty much just always are going to want.
 #rm="rm -vI" \
