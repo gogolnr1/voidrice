@@ -178,10 +178,10 @@ backup_movies () {
 
 backup_books () {
   printf "\nbooks:\n"
-  local book_dirname="Calibre Library"
-  if [ -d "$HOME_DIR/$book_dirname" ]; then
+  local dirname="Calibre Library"
+  if [ -d "$HOME_DIR/$dirname" ]; then
     if [ -d "$BACKUP_DATA" ]; then
-      _rsync ${rsync_arguments_media} "$HOME_DIR/$book_dirname" "$BACKUP_DATA/"
+      _rsync ${rsync_arguments_media} "$HOME_DIR/$dirname" "$BACKUP_DATA/dirname"
     fi
   fi
 }
