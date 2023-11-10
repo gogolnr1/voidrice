@@ -28,6 +28,7 @@ do
         -b|--books)     books=1 ;;
         -m|--music)     music=1 ;;
         -v|--videos)    videos=1 ;;
+        -p|--projects)  projects=1 ;;
         -h|--home)      home=1 ;;
         -n|--nova)      nova=1 ;;
         -g|--gpg)       gpg=1 ;;
@@ -41,6 +42,7 @@ done
 [[ -v books ]] ||\
 [[ -v music ]] ||\
 [[ -v videos ]] ||\
+[[ -v projects ]] ||\
 [[ -v nova ]] ||\
 [[ -v gpg ]] ||\
 [[ -v books ]] ||\
@@ -49,6 +51,8 @@ done
 
 # -a = --archive
 # -P = --partial --progress
+# -b = backup files that exist in both folders
+# -u = skip files which are newer in dest than in src
 # --delete deletes on destination side
 # --delete-excluded deletes "non-empty" folders on destination side
 # --copy-links includes rules that lead to symbolicaly linked locations
@@ -58,6 +62,7 @@ rsync_arguments_home="-aP --delete \
 	--backup --backup-dir=.DELETED_FILES_$(date "+%Y_%m_%d-%H_%M_%S") \
 	--copy-links"
 rsync_arguments_media="-aP --copy-links"
+rsync_arguments_projects="-abuP --copy-links"
 rsync_arguments_restore="-aP --ignore-existing --exclude '.local/bin/'"
 
 _rsync () {
@@ -223,6 +228,22 @@ backup_nova () {
   umount $BACKUP_MTP1
 }
 
+backup_projects () {
+  printf "\nprojects:\n"
+
+  # limit file size for specific machine
+  [[ $(hostnamectl | grep 'Machine ID:' | awk '{print $NF}') = ff6915e5a88fcbb8152613cb61caf5ba ]] &&
+    more_arguments='--max-size=100M'
+
+  if [ -d "$BACKUP_DATA" ]; then
+    if [ -d "$HOME_DIR/Projects" ]; then
+      _rsync ${rsync_arguments_projects} ${more_arguments} "${BACKUP_DATA}/Projects/" "${HOME_DIR}/Projects"
+      _rsync ${rsync_arguments_projects}                   "${HOME_DIR}/Projects/" "${BACKUP_DATA}/Projects"
+    fi
+  fi
+
+}
+
 if [ -v restore ]; then
 	[[ -n $gpg ]]  && restore_gpg_keys
 	[[ -n $home ]] && restore_home
@@ -232,6 +253,7 @@ else
 	[[ -n $all ]] || [[ -n $stick ]]  && stick_to_stick
 	[[ -n $all ]] || [[ -n $gpg ]]    && backup_gpg_keys
 	[[ -n $all ]] || [[ -n $videos ]] && backup_movies
+	[[ -n $all ]] || [[ -n $projects ]] && backup_projects
 	[[ -n $all ]] || [[ -n $music ]]  && backup_music
 	[[ -n $all ]] || [[ -n $books ]]  && backup_books
 	[[ -n $all ]] || [[ -n $nova ]]   && backup_nova
