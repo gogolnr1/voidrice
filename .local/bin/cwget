@@ -68,7 +68,7 @@ _yt-dlp() {
 	[[ -n $islive ]] && usets='--downloader ffmpeg --hls-use-mpegts'
 	[[ -z $filename ]] && filename=$(yt-dlp --print filename "$get_url")
 	[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs'
-	[[ -n "$ytbraw" ]] && set-yt-resolution || exit 1
+	[[ -n "$ytbraw" ]] && set-yt-resolution
 
 	yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mp4
 
