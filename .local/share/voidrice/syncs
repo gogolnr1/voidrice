@@ -106,9 +106,12 @@ rsync_arguments_projects="-abuP --copy-links"
 rsync_arguments_restore="-aP --ignore-existing --exclude '.local/bin/'"
 
 _rsync () {
+  echo ""
+  echo "------ start sync -------"
   rsync --dry-run "$@"
   rsync --dry-run "$@"|grep denied
-  [[ -v wet ]] && rsync "$@" || echo "$@"
+  [[ -v wet ]] && rsync "$@" || printf "\n%s\n" "Command: rsync $*"
+  echo "------- end sync --------"
 }
 
 _gpg_keys() {
