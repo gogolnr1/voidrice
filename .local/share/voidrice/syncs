@@ -36,6 +36,7 @@ if [[ $# -eq 0 ]]; then
 fi
 
 # check options
+#dry=1
 while test $# -gt 0
 do
     case "$1" in
@@ -257,6 +258,7 @@ backup_nova () {
   printf "\nnova:\n"
   if [ ! -d "$BACKUP_MTP1/Internal shared storage" ]; then
     printf "\nmounting MTP...\n"
+    mkdir -p $BACKUP_MTP1
     jmtpfs $BACKUP_MTP1
   fi
   if [ -d "$BACKUP_MTP1/Internal shared storage" ]; then
