@@ -272,12 +272,52 @@ backup_nova () {
   umount $BACKUP_MTP1
 }
 
+createfilterfile() {
+  rm /tmp/rsyncfilter
+
+  filterbase="$1"
+
+  echo "+ $filterbase/" >> /tmp/rsyncfilter
+
+  for filename in "$2"/*; do
+	  filtercontent="${filename%.*}" && filtercontent="${filtercontent##*/}"
+          echo "+ $filterbase/$filtercontent/" >> /tmp/rsyncfilter
+          echo "+ $filterbase/$filtercontent/**" >> /tmp/rsyncfilter
+  done
+  echo "- *" >> /tmp/rsyncfilter
+}
+
 backup_projects () {
   printf "\nprojects:\n"
 
-  if [ -d "$BACKUP_DATA" ]; then
-    [[ -v currentdir ]] && relpath="$currentdir" || relpath='Projects'
+  [[ -v currentdir ]] && relpath="$currentdir" || relpath='Projects'
 
+  # Osteopathy specific workflows for eboook reader
+  if [[ $currentdir = Projects/Osteopathie/Paracelsus/Skripte ]]; then
+    # mount device if neccessary
+    if [[ ! -d $BACKUP_MTP1/"Internal shared storage" ]]; then
+      printf "\nmounting MTP...\n"
+      jmtpfs "$BACKUP_MTP1"
+    fi
+
+    if [[ -d $BACKUP_MTP1/"Internal shared storage" ]]; then
+      [[ ! -d "$BACKUP_MTP1/Internal shared storage/Books/$currentdir" ]] &&
+        mkdir -p "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
+
+      # local -> remote
+      _rsync ${rsync_arguments_projects} "$HOME_DIR/$currentdir/" "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
+
+      # remote -> local
+      [[ ! -d "$HOME_DIR/$currentdir/note" ]] &&
+        mkdir -p "$HOME_DIR/$currentdir/note"
+
+      createfilterfile "note" "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
+      _rsync ${rsync_arguments_projects} --filter="merge /tmp/rsyncfilter" "$BACKUP_MTP1/Internal shared storage/note" "$HOME_DIR/${currentdir}"
+      mv "$HOME_DIR/${currentdir}/note/"* . && rm -r "$HOME_DIR/${currentdir}/note/"
+    fi
+  fi
+
+  if [ -d "$BACKUP_DATA" ]; then
     if [ -d "$HOME_DIR/$relpath" ]; then
       # limit file size for specific machine
       [[ $(hostnamectl | grep 'Machine ID:' | awk '{print $NF}') = ff6915e5a88fcbb8152613cb61caf5ba ]] &&
