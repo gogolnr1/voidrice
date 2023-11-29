@@ -20,8 +20,11 @@ readonly BACKUP_MTP1="$HOME_DIR/.local/run/mount/nova-air"
 readonly GPG_NAMES=( 'AEA64026B34D3924C225ED6E259B91BF34A53F38' )
 
 # try to intelligently set action to be performed
+# if no parameters set
 if [[ $# -eq 0 ]]; then
+  # relative home path
   currentdir="${PWD#"$HOME"/}"
+  # very first parent dir
   parentdir="${currentdir%%/*}"
 
   case "$parentdir" in
