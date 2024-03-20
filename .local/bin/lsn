@@ -1,8 +1,8 @@
 #!/bin/bash
 
 IFS="|"
-read -a lines    <<< "$(ls -hNAp --color --group-directories-first|tr "\n" "|")"
-read -a lines_nc <<< "$(ls -hNAp         --group-directories-first|tr "\n" "|")"
+read -a lines    <<< "$(ls -trhNAp --color --group-directories-first|tr "\n" "|")"
+read -a lines_nc <<< "$(ls -htrNAp         --group-directories-first|tr "\n" "|")"
 
 [[ $(basename $0) == lsn ]] &&
 	printf '%s\n' "${lines[@]}"|nl
