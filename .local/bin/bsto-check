@@ -5,7 +5,7 @@ BASEURL='https://bs.to'
 
 hash pup 2>/dev/null || { echo "command pup not installed" >&2; exit 1; }
 
-regx='(.*) S'
+regx='(.*) S[0-1]'
 [[ $1 =~ $regx ]] &&
 	SERIESNAME="${BASH_REMATCH[1]}" || SERIESNAME="$1"
 
@@ -39,8 +39,8 @@ fi
 
 # replace some special characters with a dash
 urltitle=$( echo "$title" |
-	perl -pe 's/- //g' |
-	perl -pe 's/[ :|]+/-/g' |
+	perl -pe 's/[-–] //g' |
+	perl -pe "s/[ :|']+/-/g" |
 	perl -pe 's/ä/ae/g' |
 	perl -pe 's/ö/oe/g' |
 	perl -pe 's/ü/ue/g' )
@@ -70,4 +70,4 @@ done && echo " found"
 season=`printf '%02d\n' "$season"` # fill up with '0'
 nextepisode=`printf '%02d\n' "$nextepisode"`
 
-cwget "$title S${season}E${nextepisode}.$language.mp4"
+cwget "$SERIESNAME S${season}E${nextepisode}.$language.mp4"
