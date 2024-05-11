@@ -1,5 +1,12 @@
 #!/bin/sh
 
+recreatetimestamp() {
+	filename=$(ls -t "$filename"* | head -1)
+	touch -a -m "$filename"
+}
+
 this=$(xclip -selection clipboard -o -print0)
 
 yt-dlp --embed-metadata -i "$@" "$this"
+
+#recreatetimestamp
