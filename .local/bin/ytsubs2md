@@ -1,0 +1,113 @@
+#!/bin/bash
+# Before running the script, please make sure you have the yt-dlp tool and jq installed on your system. The script assumes you have the correct channel ID for the @HelpfulYTChannel channel. You'll need to replace the placeholder value with the actual channel ID in the collect_video_urls function.
+# The script retrieves video URLs of the specified YouTube channel using yt-dlp and jq. Then, for each video URL, it collects metadata and English subtitles using the same yt-dlp command. Finally, it creates a markdown file for each video, incorporating the required information based on the specified format.
+
+CHANNEL='UC1KmNKYC1l0stjctkGswl6g'
+
+# Function to collect video URLs of a specific YouTube channel
+collect_video_urls() {
+  local channel_id="$CHANNEL"  # Replace with the channel ID of @HelpfulYTChannel
+
+  # Use yt-dlp to get video URLs of the channel
+  yt-dlp --flat-playlist --dump-json "https://www.youtube.com/channel/$channel_id/videos" |
+    jq -r '.webpage_url'
+}
+
+# Function to collect metadata of a video
+collect_video_metadata() {
+  local video_url="$1"
+
+  # Use yt-dlp to get metadata of the video
+  yt-dlp --dump-json "$video_url"
+}
+
+# Function to extract English subtitles from a video
+extract_english_subtitles() {
+  local video_url="$1"
+
+  # Use yt-dlp to download English subtitles as text
+  yt-dlp --write-auto-subs --sub-format "ass/srt/best" --sub-lang en --skip-download --quiet "$video_url" -o "$2"
+}
+
+# Function to create a markdown file with video information
+create_markdown_file() {
+  local video_metadata="$1"
+  local subtitle_text="$2"
+  local channel_name="After Skool"  # Replace with the actual channel name
+  local video_title=$(jq -r '.title' <<< "$video_metadata")
+  local video_id=$(jq -r '.id' <<< "$video_metadata")
+  local view_count=$(jq -r '.view_count' <<< "$video_metadata")
+  local publish_date=$(jq -r '.upload_date' <<< "$video_metadata" | sed 's/\(....\)\(..\)\(..\)/\1-\2-\3/')
+  local current_date=$(date +"%d.%m.%Y")
+
+  # Create the markdown file
+  local filename="${channel_name} - ${publish_date} - ${video_title} [${video_id}].md"
+  echo "# ${video_title}" > "$filename"
+  echo "## ${view_count} views by ${current_date}, published ${publish_date}" >> "$filename"
+  echo "### Video description" >> "$filename"
+  jq -r '.description' <<< "$video_metadata" >> "$filename"
+  echo "### Subtitle" >> "$filename"
+  echo "$subtitle_text" >> "$filename"
+  #echo "### Other metadata" >> "$filename"
+  #jq -r '. | with_entries(select(.key | startswith("description") | not))' <<< "$video_metadata" | jq -r '.' >> "$filename"
+}
+
+process_subtitle_file() {
+  local subtitle_file="$1"
+  local skip_lines=4
+  local line_counter=0
+  local processed_text=""
+
+  # Read the subtitle file line by line
+  while IFS= read -r line; do
+    ((line_counter++))
+
+    # Skip lines until the counter reaches the desired value
+    if ((line_counter <= skip_lines)); then
+      continue
+    fi
+
+    # Skip lines that start with timestamps
+    if [[ $line =~ ^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}.* ]]; then
+      continue
+    fi
+
+    # Trim leading and trailing whitespace
+    line=$(echo "$line" | awk '{$1=$1};1')
+
+    # Concatenate the processed text
+    processed_text+="$line "
+  done < "$subtitle_file"
+
+  # Remove HTML entities (e.g., "&nbsp;")
+  processed_text=$(echo "$processed_text" | sed 's/&[a-zA-Z]\+;/ /g')
+
+  # Remove extra whitespace and line breaks
+  processed_text=$(echo "$processed_text" | tr -s '[:space:]' ' ' | tr -d '\n')
+
+  rm -- "$subtitle_file"
+
+  echo "$processed_text"
+}
+
+# Main script
+video_urls=$(collect_video_urls)
+
+video_count=$(echo "$video_urls" | wc -l)
+echo "${video_count} videos found."
+
+i=0
+for video_url in $video_urls; do
+  ((i++))
+  video_metadata=$(collect_video_metadata "$video_url")
+  video_title=$(echo $video_metadata | jq -r '.title')
+  video_id=$(echo $video_metadata | jq -r '.id')
+
+  echo "$i/$video_count}: processing "$video_title""
+
+  extract_english_subtitles "$video_url" "$video_id"
+
+  subtitle_text=$(process_subtitle_file "${video_id}.en.vtt")
+
+  create_markdown_file "$video_metadata" "$subtitle_text"
+done
