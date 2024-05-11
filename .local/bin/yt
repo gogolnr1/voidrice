@@ -7,6 +7,8 @@ recreatetimestamp() {
 
 this=$(xclip -selection clipboard -o -print0)
 
-yt-dlp --embed-metadata -i "$@" "$this"
+filename=$(basename "$(yt-dlp -e $this| sed 's/[\/:*?"<>|]/_/g')").mp3
 
-#recreatetimestamp
+yt-dlp --embed-metadata -i "$@" -o "$filename" "$this"
+
+touch -a -m "$filename"
