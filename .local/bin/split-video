@@ -1,0 +1,11 @@
+#!/bin/bash
+# splits video into its chapters parts
+
+inputfile="$1"
+mkvmerge -o "$inputfile-part" --split chapters:all "$inputfile"
+
+
+
+#for section in $inputfile-part*; do
+#
+#done
