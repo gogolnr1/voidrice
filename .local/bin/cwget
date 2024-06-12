@@ -70,7 +70,7 @@ _yt-dlp() {
 	[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs'
 	[[ -n "$ytbraw" ]] && set-yt-resolution
 
-	yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mp4
+	yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mkv
 
 	recreatetimestamp
 }
@@ -95,12 +95,10 @@ overwrite () {
 # get current clipboard content as downlaod source
 get_url=$(xclip -selection clipboard -o -print0)
 
-#echo "$get_url" | grep -oP 'http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)'
-
 # determine which tool to use
 case $get_url in
- 	*".m3u8"*) m3u8=1 ;;
-	*"youtu"*) m3u8=1 && ytbraw=1 ;;
+	*"youtu"*) yt=1 && ytbraw=1 ;;
+ 	*".m3u8"*) yt=1 ;;&
 	"curl "*) crl=1 ;;
 	"http"* ) wgt=1 ;;
 	*       )
@@ -108,6 +106,8 @@ case $get_url in
 		exit 0
 	;;
 esac
+
+#if [[ -n $crl ]] && [[ $get_url = *".m3u8"* ]] && yt=1
 
 # remove list parameter from url to prevent downloading whole playlist
 [[ -n $ytbraw ]] && get_url=${get_url%%?list*}
@@ -117,7 +117,8 @@ cd - &> /dev/null
 if [[ -z "$1" ]]
 then
 	[[ -z "$ytbraw" ]] && command -v greenclip &> /dev/null &&
-    		filename="$(greenclip print | sed -n 2p)"
+    		filename="$(greenclip print | sed -n 2p)" &&
+		[[ $filename =~ ^[a-zA-Z0-9_\.-]+$ ]] || filename=""
 else
 	filename="$1"
 fi
@@ -137,18 +138,17 @@ if [[ $(printf "%s\n" "${files[@]}" | wc -l) -gt 0 ]]; then
 fi
 
 # if filename not empty & without file extension, fill in mp4 extension
-[ -n "${filename}" ] && [ "$filename" == "${filename##*.mp4}" ] &&
+[ -n "${filename}" ] && [[ $filename != *.* ]] &&
 	filename="$filename.mp4"
-
-# if filename not given or is m3u8, use yt-dlp and exit
-[[ -z "$filename" ]] || [[ -n $m3u8 ]] && _yt-dlp "$get_url" && exit 0
 
 # if file exists ask to continue or to overwrite file
 [[ -f "$filename" ]] && overwrite "$filename"
 
-# use curl (actually translating to wget syntax)
+# translate curl headers to wget and yt-dlp
 if [[ -n $crl ]] ; then
-	get_url=$(echo ${get_url#curl } | sed -e 's/-H/--header/g')
+	[[ -z $yt ]] &&
+		get_url=$(echo ${get_url#curl } | sed -e 's/-H/--header/g') ||
+		get_url=$(echo ${get_url#curl } | sed -e 's/-H/--add-header/g')
 	wgt=1
 fi
 
@@ -156,8 +156,15 @@ fi
 if [[ -n $wgt ]] ; then
 	[[ -n $continue ]] && wget_parms="-c"
 	while true ; do
-		[[ -f "$filename" ]] && wget_parms="-c"
-		eval "wget -T 5 $wget_parms $get_url -O '$filename' && break;"
+		[[ -n $filename ]] && filename="-O $filename"
+		[[ -f $filename ]] && wget_parms="-c"
+		eval "wget -T 5 $wget_parms $get_url '$filename' && break;"
 	done
 	recreatetimestamp
+	exit 0
 fi
+
+# if m3u8 or youtube link, use yt-dlp
+[[ -n $yt ]] && _yt-dlp "$get_url" && exit 0
+
+# bash --rcfile <(echo "$TERMINAL -e sleep 5; mpv '$filename'")
