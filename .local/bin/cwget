@@ -154,11 +154,15 @@ fi
 
 # use wget
 if [[ -n $wgt ]] ; then
-	[[ -n $continue ]] && wget_parms="-c"
 	while true ; do
-		[[ -n $filename ]] && filename="-O $filename"
-		[[ -f $filename ]] && wget_parms="-c"
-		eval "wget -T 5 $wget_parms $get_url '$filename' && break;"
+		[[ -n $filename ]] && [[ -f $filename ]] &&
+			wget_parms="-c"
+		[[ -z $filename ]] &&
+			filename=$(printf '%b' "$(echo "$get_url" | sed 's/%/\\x/g')") &&
+			filename=$(basename "$filename")
+		[[ ! $filename =~ \.[a-zA-Z0-9]+$ ]] &&
+			echo "$filename is not a valid filename" && exit 1
+		eval "wget -T 5 $wget_parms $get_url -O '$filename' && break;"
 	done
 	recreatetimestamp
 	exit 0
