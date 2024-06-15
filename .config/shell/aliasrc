@@ -88,7 +88,9 @@ alias \
 	xi="sudo xbps-install" \
 	xr="sudo xbps-remove -R" \
 	xxq="xbps-query" \
-	x="xdg-open"
+	x="xdg-open" \
+	# identify last created file and open it
+	xl="find . -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -d ' ' -f 2- | xargs -I {} sh -c 'xdg-open "\""$@"\""' _ {}"
 
 alias \
 	z="zathura" \
