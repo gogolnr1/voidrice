@@ -1,0 +1,11 @@
+*/
+!.local
+!.local/bin
+!.config
+!.config/pipewire
+!.config/x11
+!.config/redshift
+!.config/shell
+.config/shell/shortcutrc
+.config/shell/zshnameddirrc
+QtProject.conf
