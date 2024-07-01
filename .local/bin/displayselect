@@ -32,8 +32,14 @@ twoscreen() { # If multi-monitor is selected and there are two screens.
     else
         primary=$(echo "$screens" | dmenu -i -p "Select primary display:")
         secondary=$(echo "$screens" | grep -v "$primary")
+
+	# --- hack ---
+	xresprim=$(xrandr -q | sed -n "/^$primary/,/\+/p" | tail -n 1 | awk '{print $1}' | sed 's/x.*//')
+	[ "$xresprim" -gt 1920 ] && primscale="0.5x0.5" || primscale="1x1"
+	# ------------
+
         direction=$(printf "left\\nright" | dmenu -i -p "What side of $primary should $secondary be on?")
-        _xrandr --output "$primary" --primary --auto --scale 1.0x1.0 --output "$secondary" --"$direction"-of "$primary" --auto --scale 1.0x1.0
+        _xrandr --output "$primary" --primary --auto --scale $primscale --output "$secondary" --"$direction"-of "$primary" --auto --scale 1.0x1.0
     fi
     }
 
@@ -54,7 +60,12 @@ multimon() { # Multi-monitor handler.
 onescreen() { # If only one output available or chosen.
 	rotate=$(printf "normal\\nleft\\nright" | dmenu -i -p "Rotate direction:")
 
-	_xrandr --output "$1" --primary --auto --scale 1.0x1.0 \
+	# --- hack ---
+	xresprim=$(xrandr -q | sed -n "/^$1/,/\+/p" | tail -n 1 | awk '{print $1}' | sed 's/x.*//')
+	[ "$xresprim" -gt 1920 ] && primscale="0.75x0.75" || primscale="1x1"
+	# ------------
+
+	_xrandr --output "$1" --primary --auto --scale $primscale \
 		$([[ -n $rotate ]] && echo "--rotate $rotate") \
 		$(echo "$allposs" | grep -v "\b$1" | awk '{print "--output", $1, "--off"}' | paste -sd ' ' -)
 	}

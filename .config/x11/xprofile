@@ -10,7 +10,8 @@ export SUDO_ASKPASS="$HOME/.local/bin/dmenupass"
 displayinit #& xrdbpid=$!	# X related monitor settings (requires global SCREEN_DPI value)
 greenclip daemon &
 
-autostart="mpd xcompmgr dunst unclutter pipewire remapd"
+#autostart="mpd xcompmgr dunst unclutter pipewire remapd redshift"
+autostart="mpd xcompmgr dunst unclutter remapd redshift"
 
 for program in $autostart; do
 	pidof -sx "$program" || "$program" &

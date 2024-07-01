@@ -118,7 +118,7 @@ if [[ -z "$1" ]]
 then
 	[[ -z "$ytbraw" ]] && command -v greenclip &> /dev/null &&
     		filename="$(greenclip print | sed -n 2p)" &&
-		[[ $filename =~ ^[a-zA-Z0-9_\.-]+$ ]] || filename=""
+		[[ $filename =~ ^[a-zA-Z0-9_.[:space:]-]+$ ]] || filename=""
 else
 	filename="$1"
 fi
@@ -152,6 +152,9 @@ if [[ -n $crl ]] ; then
 	wgt=1
 fi
 
+# if m3u8 or youtube link, use yt-dlp
+[[ -n $yt ]] && _yt-dlp "$get_url" && exit 0
+
 # use wget
 if [[ -n $wgt ]] ; then
 	while true ; do
@@ -167,8 +170,5 @@ if [[ -n $wgt ]] ; then
 	recreatetimestamp
 	exit 0
 fi
-
-# if m3u8 or youtube link, use yt-dlp
-[[ -n $yt ]] && _yt-dlp "$get_url" && exit 0
 
 # bash --rcfile <(echo "$TERMINAL -e sleep 5; mpv '$filename'")
