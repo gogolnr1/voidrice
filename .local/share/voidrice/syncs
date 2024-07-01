@@ -9,6 +9,7 @@ for device in $BACKUP_LARGE; do
 	[[ -d /run/mount/usb/$device ]] && [[ $(df -h | grep "/run/mount/usb/$device") ]] &&
 		BACKUP_DATA="/run/mount/usb/$device" && continue
 done
+echo "Device: $BACKUP_DATA"
 
 readonly HOME_DIR="/home/$USER"
 readonly MUSIC_DIR="/run/mount/41G-PART/Musik"
@@ -29,7 +30,8 @@ if [[ $# -eq 0 ]]; then
 
   case "$parentdir" in
     Projects) projects=1 ;;
-    *) exit 0 ;;
+    Videos) videos=1 ;;
+    *) echo "no action to perform" && exit 0 ;;
   esac
 
   printf "Found specific sync folder \"$currentdir\".\n\n"
@@ -110,7 +112,8 @@ _rsync () {
   echo ""
   echo "------ start sync -------"
   rsync --dry-run "$@"
-  rsync --dry-run "$@"|grep denied
+  #rsync --dry-run "$@" --stats | grep "Number of created files"
+  #rsync --dry-run "$@"|grep denied
   [[ -v wet ]] && rsync "$@" || printf "\n%s\n" "Command: rsync $*"
   echo "------- end sync --------"
 }
@@ -216,8 +219,11 @@ backup_movies () {
 
       read -p 'Clear Movies? ' clearm
       if [[ $clearm == "y" ]]; then
-        _rsync ${rsync_arguments_media} --remove-source-files ${HOME_DIR}/Videos/Movies/ ${BACKUP_DATA}/Videos/Movies && \
-		find ${BACKUP_DATA}/Videos/Movies/* -type d -empty -delete
+        _rsync ${rsync_arguments_media} \
+		--remove-source-files \
+		${HOME_DIR}/Videos/Movies/ \
+		${BACKUP_DATA}/Videos/Movies && \
+        find ${BACKUP_DATA}/Videos/Movies/* -type d -empty -delete
       fi
     fi
     set +e

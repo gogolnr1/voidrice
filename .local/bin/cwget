@@ -118,7 +118,7 @@ if [[ -z "$1" ]]
 then
 	[[ -z "$ytbraw" ]] && command -v greenclip &> /dev/null &&
     		filename="$(greenclip print | sed -n 2p)" &&
-		[[ $filename =~ ^[a-zA-Z0-9_\.-]+$ ]] || filename=""
+		[[ $filename =~ ^[a-zA-Z0-9_.[:space:]-]+$ ]] || filename=""
 else
 	filename="$1"
 fi
