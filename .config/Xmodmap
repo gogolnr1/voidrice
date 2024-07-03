@@ -1,10 +1,10 @@
 ! to list all keycodes enter command: xmodmap -pke
 
 ! original setting:
-!keycode  51 = numbersign apostrophe numbersign apostrophe rightsinglequotemark dead_breve rightsinglequotemark dead_breve numbersign apostrophe rightsinglequotemark dead_breve
+!keycode 51 = numbersign apostrophe numbersign apostrophe rightsinglequotemark dead_breve rightsinglequotemark dead_breve numbersign apostrophe rightsinglequotemark dead_breve
+!keycode 30 = u U u U downarrow uparrow downarrow
 
 clear Lock
 ! sets slash on german keyboard to AltGr + #
-keycode  51 = numbersign apostrophe numbersign apostrophe slash dead_breve slash dead_breve numbersign apostrophe slash dead_breve
-
-
+keycode 51 = numbersign apostrophe numbersign apostrophe slash dead_breve slash dead_breve numbersign apostrophe slash dead_breve
+keycode 30 = u U u U uparrow downarrow uparrow
