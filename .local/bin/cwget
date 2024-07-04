@@ -66,7 +66,13 @@ recreatetimestamp() {
 
 _yt-dlp() {
 	[[ -n $islive ]] && usets='--downloader ffmpeg --hls-use-mpegts'
-	[[ -z $filename ]] && filename=$(yt-dlp --print filename "$get_url")
+	if [[ -z $filename ]]; then
+		# exctract filename, upload_date and channel name for a more comprehensive filename
+		while IFS= read -r fcu; do
+			fcu+=("$fcu")
+		done <<< $(yt-dlp --print filename --print channel --print upload_date "$get_url")
+		filename="${fcu[2]} – ${fcu[3]} - ${fcu[1]}"
+	fi
 	[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs'
 	[[ -n "$ytbraw" ]] && set-yt-resolution
 
