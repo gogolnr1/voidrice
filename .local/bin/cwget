@@ -19,9 +19,13 @@
 
 # if not executed from terminal ask for filename via dmenu
 if [[ $TERM = linux ]]; then
-	filename="$(dmenu -p 'Filename:' < /dev/null)"
-	[[ -z $filename ]] &&
-		exit 0
+	wm_name=$(xprop -id "$(xdotool getwindowfocus)" WM_NAME | awk -F '"' '{print $2}' | awk -F ' - ' '{print $NF}')
+	if [[ $wm_name == "Brave" ]]; then
+		extractcurrenturl
+	else
+		filename="$(dmenu -p 'Filename:' < /dev/null)"
+		[[ -z $filename ]] && exit 0
+	fi
 
 	# execute same script in new terminal session
 	# and close terminal if successful
@@ -64,6 +68,24 @@ recreatetimestamp() {
 	touch -a -m "$filename"
 }
 
+addsubtitles() {
+	cat transcript.en.srt
+	exit 0
+	sed -i '' \
+		-e '/^[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9] --> [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]$/d' \
+		-e '/^[[:digit:]]\{1,3\}$/d' \
+		-e 's/<[^>]*>//g' \
+		transcript.en.srt
+	sed \
+		-e 's/<[^>]*>//g' \
+		-e '/^[[:space:]]*$/d' \
+		transcript.en.srt > output.txt
+	rm transcript.en.srt
+
+	ffmpeg -i "$filename" -metadata Transcript="$(cat output.txt | tr '\n' ' ')" -c copy "$filename"
+	rm output.txt
+}
+
 _yt-dlp() {
 	[[ -n $islive ]] && usets='--downloader ffmpeg --hls-use-mpegts'
 	if [[ -z $filename ]]; then
@@ -73,10 +95,15 @@ _yt-dlp() {
 		done <<< $(yt-dlp --print filename --print channel --print upload_date "$get_url")
 		filename="${fcu[2]} – ${fcu[3]} - ${fcu[1]}"
 	fi
-	[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs'
+	[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs --write-auto-subs'
 	[[ -n "$ytbraw" ]] && set-yt-resolution
 
 	yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mkv
+
+	[[ -n ytbraw ]] &&
+		yt-dlp --skip-download --write-subs --write-auto-subs --sub-lang en --sub-format ttml --convert-subs srt "$@" -o "transcript.%(ext)s" &&
+		addsubtitles
+
 
 	recreatetimestamp
 }
@@ -113,13 +140,11 @@ case $get_url in
 	;;
 esac
 
-#if [[ -n $crl ]] && [[ $get_url = *".m3u8"* ]] && yt=1
-
 # remove list parameter from url to prevent downloading whole playlist
 [[ -n $ytbraw ]] && get_url=${get_url%%?list*}
 
 # try to guess filename from 2nd last entry of clipboard history using greenclip
-cd - &> /dev/null
+#cd - &> /dev/null
 if [[ -z "$1" ]]
 then
 	[[ -z "$ytbraw" ]] && command -v greenclip &> /dev/null &&
