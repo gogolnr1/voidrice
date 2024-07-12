@@ -1,6 +1,8 @@
 */
 !.local
 !.local/bin
+!.local/share
+!.local/share/applications
 !.config
 !.config/pipewire
 !.config/x11
