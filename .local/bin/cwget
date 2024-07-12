@@ -41,6 +41,7 @@ set -e
 case $1 in
 	--eval) iseval=1 && shift;;
 	--live) islive=1 && shift;;
+	--url) get_url="$2" && shift && shift;;
 esac
 
 [[ -n $iseval ]] && cd ${XDG_VIDEOS_DIR:-$HOME/Videos} || cd $(dirname -- "$1")
@@ -68,22 +69,39 @@ recreatetimestamp() {
 	touch -a -m "$filename"
 }
 
-addsubtitles() {
-	cat transcript.en.srt
-	exit 0
-	sed -i '' \
-		-e '/^[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9] --> [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]$/d' \
-		-e '/^[[:digit:]]\{1,3\}$/d' \
-		-e 's/<[^>]*>//g' \
-		transcript.en.srt
-	sed \
-		-e 's/<[^>]*>//g' \
-		-e '/^[[:space:]]*$/d' \
-		transcript.en.srt > output.txt
-	rm transcript.en.srt
+embedtranscription() {
+	for lang in en de; do
+		# Check if the file exists to avoid errors
+		if [[ -f "transcript.$lang.srt" ]]; then
+			local srt_file="transcript.$lang.srt"
+			local output_file="output.$lang.txt"
 
-	ffmpeg -i "$filename" -metadata Transcript="$(cat output.txt | tr '\n' ' ')" -c copy "$filename"
-	rm output.txt
+			# Clean the subtitle file and remove unnecessary lines
+			sed -i '' \
+			-e '/^[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9] --> [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]$/d' \
+			-e '/^[[:digit:]]\{1,4\}$/d' \
+			-e 's/<[^>]*>//g' \
+			-e '/^[[:space:]]*$/d' \
+			"$srt_file"
+
+			# Concatenate the cleaned subtitles into a single line
+			tr '\n' ' ' < "$srt_file" > "$output_file"
+			transcript_content=$(tr '\n' ' ' < "$srt_file")
+
+			# Build the metadata parameters
+			transcript_metadata+=("-metadata" "Transcript$lang=\"$transcript_content\"")
+		fi
+	done
+
+	# Construct the ffmpeg command using an array
+	cmd=(ffmpeg -i "\"$filename\"" \
+		"${transcript_metadata[@]}" \
+		"-c" "copy" "\"temp_$filename\"")
+	# Join the array elements into a single string and execute the command using eval
+	# then overwrite original file and remove temporary files
+	eval $(printf "%s " "${cmd[@]}") && \
+	mv "temp_$filename" "$filename" && \
+	rm "transcript.*" "output.*"
 }
 
 _yt-dlp() {
@@ -94,15 +112,18 @@ _yt-dlp() {
 			fcu+=("$fcu")
 		done <<< $(yt-dlp --print filename --print channel --print upload_date "$get_url")
 		filename="${fcu[2]} – ${fcu[3]} - ${fcu[1]}"
+		[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs --write-auto-subs'
 	fi
-	[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs --write-auto-subs'
-	[[ -n "$ytbraw" ]] && set-yt-resolution
-
-	yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mkv
+	if [[ ! -f $filename ]]; then
+		[[ -n "$ytbraw" ]] && set-yt-resolution
+		yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mkv
+	fi
 
 	[[ -n ytbraw ]] &&
-		yt-dlp --skip-download --write-subs --write-auto-subs --sub-lang en --sub-format ttml --convert-subs srt "$@" -o "transcript.%(ext)s" &&
-		addsubtitles
+		yt-dlp --skip-download \
+			--write-subs --write-auto-subs --sub-lang en,de --sub-format ttml --convert-subs srt "$@" \
+			-o "transcript.%(ext)s" &&
+		embedtranscription
 
 
 	recreatetimestamp
@@ -126,7 +147,7 @@ overwrite () {
 }
 
 # get current clipboard content as downlaod source
-get_url=$(xclip -selection clipboard -o -print0)
+[[ -z $get_url ]] && get_url=$(xclip -selection clipboard -o -print0)
 
 # determine which tool to use
 case $get_url in
