@@ -116,6 +116,8 @@ _rsync () {
   #rsync --dry-run "$@"|grep denied
   [[ -v wet ]] && rsync "$@" || printf "\n%s\n" "Command: rsync $*"
   echo "------- end sync --------"
+  echo ""
+  echo ""
 }
 
 _gpg_keys() {
@@ -300,6 +302,7 @@ backup_projects () {
 
   # Osteopathy specific workflows for eboook reader
   if [[ $currentdir = Projects/Osteopathie/Paracelsus/Skripte ]]; then
+
     # mount device if neccessary
     if [[ ! -d $BACKUP_MTP1/"Internal shared storage" ]]; then
       printf "\nmounting MTP...\n"
@@ -310,8 +313,10 @@ backup_projects () {
       [[ ! -d "$BACKUP_MTP1/Internal shared storage/Books/$currentdir" ]] &&
         mkdir -p "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
 
+      more_arguments="--exclude '*.png'"
+
       # local -> remote
-      _rsync ${rsync_arguments_projects} "$HOME_DIR/$currentdir/" "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
+      _rsync ${rsync_arguments_projects} ${more_arguments} "$HOME_DIR/$currentdir/" "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
 
       # remote -> local
       [[ ! -d "$HOME_DIR/$currentdir/note" ]] &&
@@ -325,9 +330,11 @@ backup_projects () {
 
   if [ -d "$BACKUP_DATA" ]; then
     if [ -d "$HOME_DIR/$relpath" ]; then
+      more_arguments=""
+
       # limit file size for specific machine
       [[ $(hostnamectl | grep 'Machine ID:' | awk '{print $NF}') = ff6915e5a88fcbb8152613cb61caf5ba ]] &&
-        more_arguments='--max-size=100M'
+        more_arguments="$more_arguments --max-size=100M "
 
       _rsync ${rsync_arguments_projects} ${more_arguments} "${BACKUP_DATA}/${relpath}/" "${HOME_DIR}/${relpath}"
       _rsync ${rsync_arguments_projects}                   "${HOME_DIR}/${relpath}/" "${BACKUP_DATA}/${relpath}"

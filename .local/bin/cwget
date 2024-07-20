@@ -69,6 +69,7 @@ _yt-dlp() {
 	[[ -z $filename ]] && filename=$(yt-dlp --print filename "$get_url")
 	[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs'
 	[[ -n "$ytbraw" ]] && set-yt-resolution
+	[[ -n "$paracelsus" ]] && resolution="-f H.264_480px"
 
 	yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mkv
 
