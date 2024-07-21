@@ -1,0 +1,6 @@
+#!/bin/bash
+# linkhandler helper
+notify-send "$1"
+#find . -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -d ' ' -f 2- | xargs -I {} sh -c 'xdg-open "$@"' _ {}exit 1
+cwget --url "$1"
+#setsid -f mpv -quiet "$1"
