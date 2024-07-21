@@ -9,13 +9,6 @@
 # - can be called via system keybindings, then asks for filename via dmenu prompt
 # - autocompletes with .mp4 if no suffix is given
 # - also accepts curl calls
-#
-# Note to myself:
-# - Copy the link
-# - Hit the shortcut
-# - Display youtube link or file name in dmenu
-# - Edit it, hit enter
-# - Open a cwget instance on pane 9
 
 # if not executed from terminal ask for filename via dmenu
 if [[ $TERM = linux ]]; then
@@ -70,6 +63,12 @@ recreatetimestamp() {
 }
 
 embedtranscription() {
+	[[ -n ytbraw ]] &&
+		yt-dlp --skip-download \
+			--write-subs --write-auto-subs \
+			--sub-lang en,de --sub-format ttml \
+			--convert-subs srt "$@" \
+			-o "transcript.%(ext)s" || exit 0
 	for lang in en de; do
 		# Check if the file exists to avoid errors
 		if [[ -f "transcript.$lang.srt" ]]; then
@@ -94,14 +93,14 @@ embedtranscription() {
 	done
 
 	# Construct the ffmpeg command using an array
-	cmd=(ffmpeg -i "\"$filename\"" \
-		"${transcript_metadata[@]}" \
-		"-c" "copy" "\"temp_$filename\"")
+	cmd=("ffmpeg" "-i" "\"$filename.mkv\"" "${transcript_metadata[@]}" \
+		"-attach" "\"$filename.webp\"" "-metadata:s:t" "mimetype=image/jpeg" \
+		"-c" "copy" "\"temp_$filename.mkv\"")
 	# Join the array elements into a single string and execute the command using eval
 	# then overwrite original file and remove temporary files
 	eval $(printf "%s " "${cmd[@]}") && \
-	mv "temp_$filename" "$filename" && \
-	rm "transcript.*" "output.*"
+	mv "temp_$filename.mkv" "$filename.mkv" && \
+	rm "transcript.*" "output.*" "$filename.webp"
 }
 
 _yt-dlp() {
@@ -115,16 +114,12 @@ _yt-dlp() {
 		[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs --write-auto-subs'
 	fi
 	if [[ ! -f $filename ]]; then
-		[[ -n "$ytbraw" ]] && set-yt-resolution
-		yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mkv
+		[[ -n "$ytbraw" ]] && mkdir -pv Youtube && cd Youtube && set-yt-resolution
+		yt-dlp --embed-metadata --write-thumbnail \
+			-i $subs $usets $resolution "$@" \
+			-o "$filename" --merge-output-format mkv
+		embedtranscription "$@"
 	fi
-
-	[[ -n ytbraw ]] &&
-		yt-dlp --skip-download \
-			--write-subs --write-auto-subs --sub-lang en,de --sub-format ttml --convert-subs srt "$@" \
-			-o "transcript.%(ext)s" &&
-		embedtranscription
-
 
 	recreatetimestamp
 }
