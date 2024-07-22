@@ -9,19 +9,16 @@
 # - can be called via system keybindings, then asks for filename via dmenu prompt
 # - autocompletes with .mp4 if no suffix is given
 # - also accepts curl calls
-#
-# Note to myself:
-# - Copy the link
-# - Hit the shortcut
-# - Display youtube link or file name in dmenu
-# - Edit it, hit enter
-# - Open a cwget instance on pane 9
 
 # if not executed from terminal ask for filename via dmenu
 if [[ $TERM = linux ]]; then
-	filename="$(dmenu -p 'Filename:' < /dev/null)"
-	[[ -z $filename ]] &&
-		exit 0
+	wm_name=$(xprop -id "$(xdotool getwindowfocus)" WM_NAME | awk -F '"' '{print $2}' | awk -F ' - ' '{print $NF}')
+	if [[ $wm_name == "Brave" ]]; then
+		extractcurrenturl
+	else
+		filename="$(dmenu -p 'Filename:' < /dev/null)"
+		[[ -z $filename ]] && exit 0
+	fi
 
 	# execute same script in new terminal session
 	# and close terminal if successful
@@ -37,6 +34,7 @@ set -e
 case $1 in
 	--eval) iseval=1 && shift;;
 	--live) islive=1 && shift;;
+	--url) get_url="$2" && shift && shift;;
 esac
 
 [[ -n $iseval ]] && cd ${XDG_VIDEOS_DIR:-$HOME/Videos} || cd $(dirname -- "$1")
@@ -64,14 +62,64 @@ recreatetimestamp() {
 	touch -a -m "$filename"
 }
 
+embedtranscription() {
+	[[ -n ytbraw ]] &&
+		yt-dlp --skip-download \
+			--write-subs --write-auto-subs \
+			--sub-lang en,de --sub-format ttml \
+			--convert-subs srt "$@" \
+			-o "transcript.%(ext)s" || exit 0
+	for lang in en de; do
+		# Check if the file exists to avoid errors
+		if [[ -f "transcript.$lang.srt" ]]; then
+			local srt_file="transcript.$lang.srt"
+			local output_file="output.$lang.txt"
+
+			# Clean the subtitle file and remove unnecessary lines
+			sed -i '' \
+			-e '/^[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9] --> [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]$/d' \
+			-e '/^[[:digit:]]\{1,4\}$/d' \
+			-e 's/<[^>]*>//g' \
+			-e '/^[[:space:]]*$/d' \
+			"$srt_file"
+
+			# Concatenate the cleaned subtitles into a single line
+			tr '\n' ' ' < "$srt_file" > "$output_file"
+			transcript_content=$(tr '\n' ' ' < "$srt_file")
+
+			# Build the metadata parameters
+			transcript_metadata+=("-metadata" "Transcript$lang=\"$transcript_content\"")
+		fi
+	done
+
+	# Construct the ffmpeg command using an array
+	cmd=("ffmpeg" "-i" "\"$filename.mkv\"" "${transcript_metadata[@]}" \
+		"-attach" "\"$filename.webp\"" "-metadata:s:t" "mimetype=image/jpeg" \
+		"-c" "copy" "\"temp_$filename.mkv\"")
+	# Join the array elements into a single string and execute the command using eval
+	# then overwrite original file and remove temporary files
+	eval $(printf "%s " "${cmd[@]}") && \
+	mv "temp_$filename.mkv" "$filename.mkv" && \
+	rm "transcript.*" "output.*" "$filename.webp"
+}
+
 _yt-dlp() {
 	[[ -n $islive ]] && usets='--downloader ffmpeg --hls-use-mpegts'
-	[[ -z $filename ]] && filename=$(yt-dlp --print filename "$get_url")
-	[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs'
-	[[ -n "$ytbraw" ]] && set-yt-resolution
-	[[ -n "$paracelsus" ]] && resolution="-f H.264_480px"
-
-	yt-dlp --embed-metadata -i $subs $usets $resolution "$@" -o "$filename" --merge-output-format mkv
+	if [[ -z $filename ]]; then
+		# exctract filename, upload_date and channel name for a more comprehensive filename
+		while IFS= read -r fcu; do
+			fcu+=("$fcu")
+		done <<< $(yt-dlp --print filename --print channel --print upload_date "$get_url")
+		filename="${fcu[2]} – ${fcu[3]} - ${fcu[1]}"
+		[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs --write-auto-subs'
+	fi
+	if [[ ! -f $filename ]]; then
+		[[ -n "$ytbraw" ]] && mkdir -pv Youtube && cd Youtube && set-yt-resolution
+		yt-dlp --embed-metadata --write-thumbnail \
+			-i $subs $usets $resolution "$@" \
+			-o "$filename" --merge-output-format mkv
+		embedtranscription "$@"
+	fi
 
 	recreatetimestamp
 }
@@ -94,7 +142,7 @@ overwrite () {
 }
 
 # get current clipboard content as downlaod source
-get_url=$(xclip -selection clipboard -o -print0)
+[[ -z $get_url ]] && get_url=$(xclip -selection clipboard -o -print0)
 
 # determine which tool to use
 case $get_url in
@@ -108,13 +156,11 @@ case $get_url in
 	;;
 esac
 
-#if [[ -n $crl ]] && [[ $get_url = *".m3u8"* ]] && yt=1
-
 # remove list parameter from url to prevent downloading whole playlist
 [[ -n $ytbraw ]] && get_url=${get_url%%?list*}
 
 # try to guess filename from 2nd last entry of clipboard history using greenclip
-cd - &> /dev/null
+#cd - &> /dev/null
 if [[ -z "$1" ]]
 then
 	[[ -z "$ytbraw" ]] && command -v greenclip &> /dev/null &&

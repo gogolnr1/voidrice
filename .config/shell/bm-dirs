@@ -9,7 +9,7 @@ Dt  ${XDG_DOWNLOAD_DIR:-$HOME/Downloads/TelegramDesktop}
 d   ${XDG_DOCUMENTS_DIR:-$HOME/Documents}
 dt  ${XDG_DATA_HOME:-$HOME/.local/share}
 rr  $HOME/.local/src
-rp  $REPOSITORIES
+rp  $HOME/.local/repositories
 h   $HOME
 m   ${XDG_MUSIC_DIR:-$HOME/Music}
 mn  $HOME/mounts

@@ -2,6 +2,7 @@
 
 export SUDO_ASKPASS="$HOME/.local/bin/dmenupass"
 
+
 [ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc"
 
 # This file runs when a DM logs you into a graphical session.
