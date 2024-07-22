@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Define the file to which clipboard content will be appended
+FILE_PATH="/home/toto/.local/repositories/Notes/Cards/Content-to-process.md"
+
+# Check for the required clipboard tools and capture clipboard content
+CLIPBOARD_CONTENT=$(xclip -selection clipboard -o)
+
+# Append the clipboard content to the specified file
+echo "$CLIPBOARD_CONTENT" >> "$FILE_PATH"
+
+# Change to the directory containing the file
+cd "$(dirname "$FILE_PATH")" || exit
+
+# Add the file to the git staging area
+git add "$(basename "$FILE_PATH")"
+
+# Commit the changes with a message
+git commit -m "Append clipboard content to $(basename "$FILE_PATH")"
+
+# Push the changes to the remote repository on GitHub
+git push
+
+# Optional: Provide feedback to the user
+echo "Clipboard content has been appended to $FILE_PATH, committed, and pushed to GitHub."

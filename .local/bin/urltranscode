@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# URL Encode function
+urlencode() {
+    local string="${1}"
+    local encoded=""
+    local pos c o
+    for (( pos=0 ; pos<${#string} ; pos++ )); do
+        c=${string:$pos:1}
+        case "$c" in
+            [a-zA-Z0-9.~_-]) o="$c" ;;
+            *)               o=$(printf '%%%02X' "'$c") ;;
+        esac
+        encoded+="${o}"
+    done
+    echo "${encoded}"
+}
+
+# URL Decode function
+urldecode() {
+    local url_encoded="${1//+/ }"
+    printf '%b' "${url_encoded//%/\\x}"
+}
+
+# Example Usage
+
+# Input URI
+uri="obsidian://advanced-uri?vault=Niklas&commandid=obsidian-read-it-later%253Asave-clipboard-to-notice"
+
+# Decode URI
+decoded_uri=$(urldecode "$uri")
+
+echo "Original URI: $uri"
+echo "Decoded URI: $decoded_uri"
