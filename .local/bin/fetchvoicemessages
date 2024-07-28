@@ -1,0 +1,12 @@
+#!/bin/bash
+
+source_folder="/run/mount/usb/WS-853/RECORDER/FOLDER_C"
+destination_folder="/home/toto/Projects/Niklas/.Sprachaufzeichnungen"
+batch_folder="$destination_folder/batches"
+batch_file="$batch_folder/$(date +"%Y-%m-%d_%H-%M-%S").txt"
+
+rsync_output=$(rsync -rni --ignore-existing "$source_folder/" "$destination_folder/" | awk '{print $2}')
+rsync -r --ignore-existing "$source_folder/" "$destination_folder/"
+
+##echo "Newly created files:" > "$batch_file"
+echo "$rsync_output" >> "$batch_file"
