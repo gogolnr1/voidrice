@@ -26,4 +26,24 @@ case $BLOCK_BUTTON in
 	6) "$TERMINAL" -e "$EDITOR" "$0" ;;
 esac
 
+# Get the current time
+current_hour=$(date "+%H")
+current_minute=$(date "+%M")
+
+# Check if the current time matches the target time
+#!/bin/bash
+
+input_file="input.mp3"
+start_time="00:01:30"  # Start playing from 1 minute and 30 seconds
+
+[[ "$current_hour" -eq 18 && "$current_minute" -eq 30 ]] && \
+	notify-send "Time to call it a day soon..." && \
+	ffmpeg -i "$HOME/r2d2.mp3" -ss "00:00:02" -to "00:00:07" -af "volume=5"  -f mp3 - | ffplay -nodisp -autoexit -
+[[ "$current_hour" -eq 18 && "$current_minute" -eq 45 ]] && \
+	notify-send "Time to call it a day in 15 Minutes!" && \
+	ffmpeg -i "$HOME/r2d2.mp3" -ss "00:00:08" -to "00:00:12" -af "volume=5"  -f mp3 - | ffplay -nodisp -autoexit -
+[[ "$current_hour" -eq 19 && "$current_minute" -eq 0 ]] && \
+	notify-send "You really need to close down NOW!" && \
+	ffmpeg -i "$HOME/r2d2.mp3" -ss "00:00:15.5" -to "00:00:18" -af "volume=5"  -f mp3 - | ffplay -nodisp -autoexit -
+
 date "+%Y %b %d (%a) $icon%H:%M"

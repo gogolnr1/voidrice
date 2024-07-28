@@ -1,0 +1,22 @@
+#!/bin/bash
+
+url=$(extractcurrenturl)
+path="$HOME/Music/Podcasts"
+script="$HOME/.config/simple-usb-automount/hooks/WS-853/.update-podcasts"
+
+case "$url" in
+	*mkv|*webm|*mp4|*youtube.com/v/*|*youtube.com/watch*|*youtube.com/playlist*|*youtube.com/shorts*|*youtu.be*|*hooktube.com*|*bitchute.com*)
+		continue ;;
+	*)
+		exit 1
+esac
+
+[[ -d $path ]] && cd "$path" || exit 1
+
+eval "$TERMINAL -e yt -x -f bestaudio/best --audio-format mp3"
+
+if lsblk -o LABEL,MOUNTPOINT | grep -q "^WS-853 "; then
+	[[ -f $script ]] && sh "$script" &&
+		notify-send "Podcast saved on WS-853" ||
+		notify-send "Something went wrong with podcasts sync"
+fi

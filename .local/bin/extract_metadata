@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Check if ffmpeg and ffprobe are installed
+if ! command -v ffmpeg &> /dev/null || ! command -v ffprobe &> /dev/null
+then
+    echo "ffmpeg and ffprobe are required but not installed. Please install them."
+    exit 1
+fi
+
+# Check for input file argument
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <filename.mkv>"
+    exit 1
+fi
+
+input_file="$1"
+
+# Extract the "Transcript" metadata value
+transcript=$(ffprobe -v error -show_entries format_tags=TRANSCRIPTEN -of default=noprint_wrappers=1:nokey=1 "$input_file")
+
+# Check if the transcript metadata exists
+if [ -z "$transcript" ]; then
+    echo "No Transcript metadata found in $input_file."
+else
+    echo "Transcript metadata: $transcript"
+    echo "$transcript" > "${input_file%.mkv}_Transcript.txt"
+    echo "Transcript metadata has been saved to ${input_file%.mkv}_Transcript.txt"
+fi
+
+# Extract the attached JPEG image
+ffmpeg -dump_attachment:t "" -i "$input_file" 2>&1 | grep "filename" | while read -r line ; do
+    filename=$(echo $line | sed 's/.*filename=//')
+    echo "$filename"
+    mimetype=$(ffprobe -v error -select_streams t -show_entries stream_tags=mimetype -of default=noprint_wrappers=1:nokey=1 "$input_file")
+
+    if [ "$mimetype" == "image/jpeg" ]; then
+        ffmpeg -dump_attachment:t "$filename" -i "$input_file"
+        echo "Attached JPEG image has been saved to $filename"
+    fi
+done
+
+echo "Extraction completed."

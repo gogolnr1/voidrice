@@ -1,0 +1,115 @@
+#!/bin/bash
+
+set -e
+
+set_yt_resolution() {
+	PS3="Enter a number: "
+
+	if [[ -z $resoultion ]]; then
+		select resolution in best 144 240 360 480 720 1080 2160 abort
+		do
+			[[ -n $resolution ]] || { echo "Please try again." >&2; continue; }
+			break
+		done
+	fi
+
+	[[ $resolution = abort ]] && exit 1
+	[[ $resolution = best ]] && resolution='' ||
+		resolution=" -S res:$resolution"
+}
+
+embedtranscription() {
+	[[ -z $@ ]] && exit 1
+
+	video_id=$(echo "$@" | sed -n 's/.*\[\([^]]*\)\].*/\1/p')
+	[[ -n $video_id ]] &&
+		url="https://www.youtube.com/watch?v=$video_id" ||
+ 		url="$@"
+	echo "$url"
+
+	[[ -z $filename ]] &&
+		echo "no filename given. exiting..." &&
+		exit 1
+
+	#file_ext="${filename##*.}"
+	# file_ext auf länge = 3 prüfen
+	##[[ "$file_ext" == "$filename" ]] &&
+	file_ext="mkv"
+
+	cmd=("yt-dlp" "--skip-download" \
+		"--write-subs" "--write-auto-subs" \
+		"--sub-lang" "en,de" "--sub-format" "ttml" \
+		"--convert-subs" "srt" "\"$url\"" \
+		"-o" "\"transcript.%(ext)s\"")
+	#printf "%s " "${cmd[@]}"
+	#exit 1
+	eval $(printf "%s " "${cmd[@]}")
+	for lang in en de; do
+		# Check if the file exists to avoid errors
+		if [[ -f "transcript.$lang.srt" ]]; then
+			local srt_file="transcript.$lang.srt"
+			local output_file="output.$lang.txt"
+
+			# Clean the subtitle file and remove unnecessary lines
+			sed -i '' \
+			-e '/^[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9] --> [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]$/d' \
+			-e '/^[[:digit:]]\{1,4\}$/d' \
+			-e 's/<[^>]*>//g' \
+			-e '/^[[:space:]]*$/d' \
+			"$srt_file"
+
+			# Concatenate the cleaned subtitles into a single line
+			tr '\n' ' ' < "$srt_file" > "$output_file"
+			transcript_content=$(tr '\n' ' ' < "$srt_file")
+
+			# Build the metadata parameters
+			transcript_metadata+=("-metadata" "Transcript$lang=\"$transcript_content\"")
+		fi
+	done
+
+	# Construct the ffmpeg command using an array
+	[[ -f $filename.jpg ]] && [[ -n $transcript_metadata ]] && cmd=("ffmpeg" \
+		"-i" "\"$filename.$file_ext\"" "-i" "\"$filename.jpg\"" \
+		"-map" "0" "-map" "1" "-c" "copy" \
+		"${transcript_metadata[@]}" \
+		"-disposition:v:0" "attached_pic"
+		"\"temp_$filename.$file_ext\"") &&
+	# Join the array elements into a single string and execute the command using eval
+	# then overwrite original file and remove temporary files
+		eval $(printf "%s " "${cmd[@]}")
+
+	# TODO make an exit trap out of this
+	mv "temp_$filename.$file_ext" "$filename.$file_ext"
+	rm "transcript."* "output."*
+	# "$filename".jpg
+}
+
+_yt_dlp() {
+	[[ -n $islive ]] &&
+		collector+=('--downloader' 'ffmpeg' '--hls-use-mpegts')
+	if [[ -z $filename ]]; then
+		# exctract filename, upload_date and channel name for a more comprehensive filename
+		while IFS= read -r fcu; do
+			fcu+=("$fcu")
+		done <<< $(yt-dlp --print filename --print channel --print upload_date "$get_url")
+		filename="${fcu[2]} – ${fcu[3]} - ${fcu[1]%.*}"
+		collector+=("-o" "\"$filename\"")
+	fi
+	collector+=('--sub-lang' 'en,de' '--embed-subs' '--write-auto-subs')
+	if [[ ! -f $filename.mkv ]]; then
+		[[ -n "$ytbraw" ]] && [[ ! $(basename $PWD) = Youtube ]] && \
+			mkdir -pv Youtube && cd Youtube
+		[[ -n "$ytbraw" ]] && set_yt_resolution
+		cmd+=("yt-dlp" "-i" "\"$@\""
+			"--embed-metadata" "--write-thumbnail"
+			"--merge-output-format" "mkv"
+			"--exec" "'touch -m -a {}'"
+			"$resolution"
+			"${collector[@]}")
+		eval $(printf "%s " "${cmd[@]}")
+		ffmpeg -i "$filename.webp" "$filename.jpg" && rm "$filename.webp"
+	fi
+	[[ -n ytbraw ]] && embedtranscription "$@"
+
+	#recreatetimestamp
+}
