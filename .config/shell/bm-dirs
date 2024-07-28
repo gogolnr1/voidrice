@@ -11,6 +11,7 @@ rr  $HOME/.local/src
 rp  $HOME/.local/repositories
 h   $HOME
 m   ${XDG_MUSIC_DIR:-$HOME/Music}
+mp  ${XDG_MUSIC_DIR:-$HOME/Music/Podcasts}
 mn  $HOME/mounts
 N   $HOME/Projects/Niklas
 pp  ${XDG_PICTURES_DIR:-$HOME/Pictures}
@@ -18,3 +19,4 @@ sc  $HOME/.local/bin
 src $HOME/.local/src
 vv  Videos
 vvs Videos/Series
+vvy Videos/Youtube
