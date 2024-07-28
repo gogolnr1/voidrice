@@ -8,7 +8,7 @@ source $HOME/.local/bin/accessoirs/yt-accs
 # if playlist, no rephrasing of filenames for now and reverse playlist order.
 playlist_id=$(echo "$url" | sed -n 's/.*[?&]list=\([^&?]*\).*/\1/p')
 if [[ -z $playlist_id ]]; then
-	params+=("-o" "$(basename \"$(yt-dlp -e $url| sed 's/[\/:*?"<>|]/_/g')\").mp3")
+	params+=("-o" "\"$(yt-dlp -e $url| sed 's/[\/:*?"<>|]/_/g').mp3\"" "-i" "$url")
 else
 	params+=("-i" "https://www.youtube.com/playlist?list=$playlist_id" "--playlist-reverse")
 fi
