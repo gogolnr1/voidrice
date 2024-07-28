@@ -1,14 +1,20 @@
 #!/bin/sh
 
-recreatetimestamp() {
-	filename=$(ls -t "$filename"* | head -1)
-	touch -a -m "$filename"
-}
+url=$(xclip -selection clipboard -o -print0)
 
-this=$(xclip -selection clipboard -o -print0)
+source $HOME/.local/bin/accessoirs/yt-accs
 
-filename=$(basename "$(yt-dlp -e $this| sed 's/[\/:*?"<>|]/_/g')").mp3
+# its a playlist or a regular video. if not a playlist then regular one-video download.
+# if playlist, no rephrasing of filenames for now and reverse playlist order.
+playlist_id=$(echo "$url" | sed -n 's/.*[?&]list=\([^&?]*\).*/\1/p')
+if [[ -z $playlist_id ]]; then
+	params+=("-o" "$(basename \"$(yt-dlp -e $url| sed 's/[\/:*?"<>|]/_/g')\").mp3")
+else
+	params+=("-i" "https://www.youtube.com/playlist?list=$playlist_id" "--playlist-reverse")
+fi
 
-yt-dlp --embed-metadata -i "$@" -o "$filename" "$this"
+cmd=("yt-dlp" "--embed-metadata" "--exec" "'touch -m -a {}'" "${params[@]}" "$@")
+eval $(printf "%s " "${cmd[@]}")
 
-touch -a -m "$filename"
+[[ -z $playlist_id ]] &&
+	echo "$filename"

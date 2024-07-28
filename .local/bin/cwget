@@ -27,101 +27,26 @@ if [[ $TERM = linux ]]; then
 	exit $?
 fi
 
-source "$HOME/.config/shell/rc.d/00_colors"
-
 set -e
+
+source "$HOME/.config/shell/rc.d/00_colors"
+accessoir_file=$HOME/.local/bin/accessoirs/yt-accs
+[[ -f $accessoir_file ]] &&
+	source "$accessoir_file" ||
+	exit 1
 
 case $1 in
 	--eval) iseval=1 && shift;;
 	--live) islive=1 && shift;;
+	--res) resoultion="$2" && shift && shift;;
 	--url) get_url="$2" && shift && shift;;
+	--download-list) dllist=1 && shift;;
 esac
 
 [[ -n $iseval ]] && cd ${XDG_VIDEOS_DIR:-$HOME/Videos} || cd $(dirname -- "$1")
 
 colorize () {
 	printf "${BI}$1${NC}"
-}
-
-set-yt-resolution() {
-	PS3="Enter a number: "
-
-	select resolution in best 144 240 360 480 720 1080 2160 abort
-	do
-		[[ -n $resolution ]] || { echo "Please try again." >&2; continue; }
-		break
-	done
-
-	[[ $resolution = abort ]] && exit 1
-	[[ $resolution = best ]] && resolution='' ||
-		resolution=" -S res:$resolution"
-}
-
-recreatetimestamp() {
-	filename=$(ls -t "$filename"* | head -1)
-	touch -a -m "$filename"
-}
-
-embedtranscription() {
-	[[ -n ytbraw ]] &&
-		yt-dlp --skip-download \
-			--write-subs --write-auto-subs \
-			--sub-lang en,de --sub-format ttml \
-			--convert-subs srt "$@" \
-			-o "transcript.%(ext)s" || exit 0
-	for lang in en de; do
-		# Check if the file exists to avoid errors
-		if [[ -f "transcript.$lang.srt" ]]; then
-			local srt_file="transcript.$lang.srt"
-			local output_file="output.$lang.txt"
-
-			# Clean the subtitle file and remove unnecessary lines
-			sed -i '' \
-			-e '/^[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9] --> [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]$/d' \
-			-e '/^[[:digit:]]\{1,4\}$/d' \
-			-e 's/<[^>]*>//g' \
-			-e '/^[[:space:]]*$/d' \
-			"$srt_file"
-
-			# Concatenate the cleaned subtitles into a single line
-			tr '\n' ' ' < "$srt_file" > "$output_file"
-			transcript_content=$(tr '\n' ' ' < "$srt_file")
-
-			# Build the metadata parameters
-			transcript_metadata+=("-metadata" "Transcript$lang=\"$transcript_content\"")
-		fi
-	done
-
-	# Construct the ffmpeg command using an array
-	cmd=("ffmpeg" "-i" "\"$filename.mkv\"" "${transcript_metadata[@]}" \
-		"-attach" "\"$filename.webp\"" "-metadata:s:t" "mimetype=image/jpeg" \
-		"-c" "copy" "\"temp_$filename.mkv\"")
-	# Join the array elements into a single string and execute the command using eval
-	# then overwrite original file and remove temporary files
-	eval $(printf "%s " "${cmd[@]}") && \
-	mv "temp_$filename.mkv" "$filename.mkv" && \
-	rm "transcript.*" "output.*" "$filename.webp"
-}
-
-_yt-dlp() {
-	[[ -n $islive ]] && usets='--downloader ffmpeg --hls-use-mpegts'
-	if [[ -z $filename ]]; then
-		# exctract filename, upload_date and channel name for a more comprehensive filename
-		while IFS= read -r fcu; do
-			fcu+=("$fcu")
-		done <<< $(yt-dlp --print filename --print channel --print upload_date "$get_url")
-		filename="${fcu[2]} – ${fcu[3]} - ${fcu[1]}"
-		[[ -z $subs ]] && subs='--sub-lang en,de --embed-subs --write-auto-subs'
-	fi
-	if [[ ! -f $filename ]]; then
-		[[ -n "$ytbraw" ]] && mkdir -pv Youtube && cd Youtube && set-yt-resolution
-		yt-dlp --embed-metadata --write-thumbnail \
-			-i $subs $usets $resolution "$@" \
-			-o "$filename" --merge-output-format mkv
-		embedtranscription "$@"
-	fi
-
-	recreatetimestamp
 }
 
 overwrite () {
@@ -157,7 +82,9 @@ case $get_url in
 esac
 
 # remove list parameter from url to prevent downloading whole playlist
-[[ -n $ytbraw ]] && get_url=${get_url%%?list*}
+if [[ -n $ytbraw ]]; then
+	get_url=${get_url%%?list*}
+fi
 
 # try to guess filename from 2nd last entry of clipboard history using greenclip
 #cd - &> /dev/null
@@ -200,7 +127,7 @@ if [[ -n $crl ]] ; then
 fi
 
 # if m3u8 or youtube link, use yt-dlp
-[[ -n $yt ]] && _yt-dlp "$get_url" && exit 0
+[[ -n $yt ]] && _yt_dlp "$get_url" && exit 0
 
 # use wget
 if [[ -n $wgt ]] ; then
