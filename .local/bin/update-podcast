@@ -5,5 +5,5 @@ set -e
 source_folder="$HOME/Music/Podcasts"
 destination_folder="/run/mount/usb/WS-853/RECORDER/FOLDER_E"
 
-rsync_output=$(rsync -rni --ignore-existing --size-only --modify-window=2 "$source_folder/" "$destination_folder/" | awk '{print $2}')
-rsync -r --ignore-existing --size-only --modify-window=2 "$source_folder/" "$destination_folder/"
+rsync_output=$(rsync -rni --ignore-existing --exclude="/*/" --size-only --modify-window=2 "$source_folder/" "$destination_folder/" | awk '{print $2}')
+rsync -r --ignore-existing --size-only --modify-window=2 --exclude="/*/" "$source_folder/" "$destination_folder/"
