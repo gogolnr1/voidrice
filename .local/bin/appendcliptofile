@@ -1,16 +1,52 @@
 #!/bin/bash
 
+set -e
+
 # Define the file to which clipboard content will be appended
 FILE_PATH="/home/toto/.local/repositories/Notes/Cards/Content-to-process.md"
 
 # Check for the required clipboard tools and capture clipboard content
 CLIPBOARD_CONTENT=$(xclip -selection clipboard -o)
 
-# Append the clipboard content to the specified file
-echo "$CLIPBOARD_CONTENT" >> "$FILE_PATH"
-
 # Change to the directory containing the file
 cd "$(dirname "$FILE_PATH")" || exit
+
+# Ensure the GPG agent is running
+#if ! gpg-connect-agent /bye &> /dev/null; then
+#    echo "Starting GPG agent..."
+#    gpg-connect-agent /bye
+#fi
+
+# Stash any uncommitted changes
+git stash -m "temporary stash"
+
+# Pull the latest changes from the remote repository
+git pull --rebase
+
+# Check for rebase conflicts
+if [ $? -ne 0 ]; then
+    message="Rebase conflict occurred in $FILE_PATH. Please resolve the conflict manually."
+    echo "$message"
+    notify-send "$message"
+    exit 1
+fi
+
+# Apply the stashed changes back
+git stash pop
+
+# Regular expression to validate URL
+urlregex="^(https?://)?([a-zA-Z0-9-]+\.)+([a-zA-Z]{2,})(:[0-9]+)?(/.*)?$"
+
+if [[ $CLIPBOARD_CONTENT =~ $urlregex ]]; then
+	# Extract title of URL
+	title=$(curl -s "$CLIPBOARD_CONTENT" | grep -o '<title[^>]*>.*</title>' | sed -e 's/<[^>]*>//g')
+
+	# Append the clipboard content to the specified file
+	echo "- [ ] [$title]($CLIPBOARD_CONTENT)" >> "$FILE_PATH"
+else
+	# Append the clipboard content to the specified file
+	echo "- [ ] $CLIPBOARD_CONTENT" >> "$FILE_PATH"
+fi
 
 # Add the file to the git staging area
 git add "$(basename "$FILE_PATH")"
@@ -22,4 +58,6 @@ git commit -m "Append clipboard content to $(basename "$FILE_PATH")"
 git push
 
 # Optional: Provide feedback to the user
-echo "Clipboard content has been appended to $FILE_PATH, committed, and pushed to GitHub."
+message="Clipboard content has been appended to $FILE_PATH, committed, and pushed to GitHub."
+notify-send "$message"
+echo $message

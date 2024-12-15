@@ -13,12 +13,11 @@
 # if not executed from terminal ask for filename via dmenu
 if [[ $TERM = linux ]]; then
 	wm_name=$(xprop -id "$(xdotool getwindowfocus)" WM_NAME | awk -F '"' '{print $2}' | awk -F ' - ' '{print $NF}')
-	if [[ $wm_name == "Brave" ]]; then
-		extractcurrenturl
-	else
-		filename="$(dmenu -p 'Filename:' < /dev/null)"
-		[[ -z $filename ]] && exit 0
-	fi
+	case $wm_name in
+		*"Brave" | *"LibreWolf") extractcurrenturl ;;
+		*) filename="$(dmenu -p 'Filename:' < /dev/null)" &&
+			[[ -z $filename ]] && exit 1 ;;
+	esac
 
 	# execute same script in new terminal session
 	# and close terminal if successful
@@ -28,6 +27,11 @@ if [[ $TERM = linux ]]; then
 fi
 
 set -e
+
+exittrap() {
+	notify-send -t 120000 "cwget exited"
+}
+trap exittrap EXIT
 
 source "$HOME/.config/shell/rc.d/00_colors"
 accessoir_file=$HOME/.local/bin/accessoirs/yt-accs
@@ -72,8 +76,8 @@ overwrite () {
 # determine which tool to use
 case $get_url in
 	*"youtu"*) yt=1 && ytbraw=1 ;;
- 	*".m3u8"*) yt=1 ;;&
 	"curl "*) crl=1 ;;
+ 	*".m3u8"*) yt=1 ;;
 	"http"* ) wgt=1 ;;
 	*       )
 		echo "Clipboard content has no valid download pattern. Exiting."
@@ -126,11 +130,17 @@ if [[ -n $crl ]] ; then
 	wgt=1
 fi
 
+################################################
+
 # if m3u8 or youtube link, use yt-dlp
-[[ -n $yt ]] && _yt_dlp "$get_url" && exit 0
+if [[ -n $yt ]]; then
+	#$TERMINAL -e bash -c "sleep 8; mpv '$PWD/$filename.part'; $SHELL" &
+	_yt_dlp "$get_url"
+fi
 
 # use wget
-if [[ -n $wgt ]] ; then
+if [[ -n $wgt ]] && [[ -z $yt ]] ; then
+	#$TERMINAL -e bash -c "sleep 5; mpv '$PWD/$filename'; $SHELL" &
 	while true ; do
 		[[ -n $filename ]] && [[ -f $filename ]] &&
 			wget_parms="-c"
@@ -141,8 +151,5 @@ if [[ -n $wgt ]] ; then
 			echo "$filename is not a valid filename" && exit 1
 		eval "wget -T 5 $wget_parms $get_url -O '$filename' && break;"
 	done
-	recreatetimestamp
-	exit 0
+	touch -m -a "$filename"
 fi
-
-# bash --rcfile <(echo "$TERMINAL -e sleep 5; mpv '$filename'")

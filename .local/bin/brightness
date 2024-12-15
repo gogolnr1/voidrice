@@ -1,6 +1,8 @@
 #!/bin/bash
 # Control screen brightness
 # --------------------------
+# to use without root privs:
+# `sudo usermod -a -G video toto`
 
 bfl=/sys/class/backlight/intel_backlight
 [[ $(stat -L -c "%a" ${bfl}/brightness) -ne 666 ]] &&

@@ -1,6 +1,7 @@
 */
 !.local
 !.local/bin
+!.local/bin/statusbar
 !.local/share
 !.local/share/applications
 !.config

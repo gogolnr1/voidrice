@@ -54,7 +54,7 @@ rmx() {
 	# then jump into remote dir
 	# and delete remotely
 	rm -v "$@" && [[ -n $delete ]] && \
-		# baaad practice as above don't take PWD.
+		# bad practice as above don't take PWD.
 		# cd $NOVA_MOUNT && rm $nova_file_list
 		# jump into MOUNT/shared_storage and rm to subfolders
 		cd "${PWD//$NOVA_DOCS/$NOVA_MOUNT/$shared_storage}" && \
@@ -63,7 +63,7 @@ rmx() {
 
 # if argument is not directory
 # and argument is number
-# and numer is in rage, then delete by number
+# and number is in range, then delete by number
 if [[ ! -d $1 ]] &&
    [[ "$1" =~ ^[0-9]+$ ]] &&
    (("$1" >= 1 && "$1" <= $count)); then

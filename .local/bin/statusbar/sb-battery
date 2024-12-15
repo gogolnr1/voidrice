@@ -36,5 +36,6 @@ for battery in /sys/class/power_supply/BAT?*; do
 	[ "$status" = "🔋" ] && [ "$capacity" -le 10 ] && \
 		warn="❗" && notify-send "🛑🛑🛑 LOW BAT 🛑🛑🛑"
 	# Prints the info
-	printf "%s%s%d%%" "$status" "$warn" "$capacity"; unset warn
+	[ ! "$status" = "⚡" ] && \
+		printf "%s%s%d%%" "$status" "$warn" "$capacity"; unset warn
 done && printf "\\n"
