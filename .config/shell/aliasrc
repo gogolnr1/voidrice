@@ -76,7 +76,7 @@ alias \
 	pbpaste="xclip -selection clipboard -o" \
 	unsorted="note --unsorted" \
 	daily="note --daily" \
-	mp="ncmpc --host=127.0.0.1 --port=6600" \
+	#mp="ncmpc --host=127.0.0.1 --port=6600" \
 	lf="lfub" \
 	magit="nvim -c MagitOnly" \
 	ref="shortcuts >/dev/null; source ${XDG_CONFIG_HOME:-$HOME/.config}/shell/shortcutrc ; source ${XDG_CONFIG_HOME:-$HOME/.config}/shell/zshnameddirrc" \
