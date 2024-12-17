@@ -41,8 +41,6 @@ embedtranscription() {
 		"--sub-lang" "en,de" "--sub-format" "ttml" \
 		"--convert-subs" "srt" "\"$url\"" \
 		"-o" "\"transcript.%(ext)s\"")
-	#printf "%s " "${cmd[@]}"
-	#exit 1
 	eval $(printf "%s " "${cmd[@]}")
 	for lang in en de; do
 		# Check if the file exists to avoid errors
@@ -102,7 +100,7 @@ _yt_dlp() {
 		[[ -n "$ytbraw" ]] && set_yt_resolution
 		#"--replace-in-metadata" "'Movie name'" "'%(Movie name)s'" "'$filename'"
 		cmd+=("yt-dlp" "-i" "\"$@\""
-			"--embed-metadata" "--write-thumbnail"
+			"--embed-metadata" "--write-thumbnail" "--embed-chapters"
 			"--merge-output-format" "mkv"
 			"--exec" "'touch -m -a {}'"
 			"$resolution"
