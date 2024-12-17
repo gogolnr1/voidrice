@@ -93,13 +93,14 @@ _yt_dlp() {
 			fcu+=("$fcu")
 		done <<< $(yt-dlp --print filename --print channel --print upload_date "$get_url")
 		filename="${fcu[2]} – ${fcu[3]} - ${fcu[1]%.*}"
-		collector+=("-o" "\"$filename\"")
 	fi
+	collector+=("-o" "\"$filename\"")
 	collector+=('--sub-lang' 'en,de' '--embed-subs' '--write-auto-subs')
 	if [[ ! -f $filename.mkv ]]; then
 		[[ -n "$ytbraw" ]] && [[ ! $(basename $PWD) = Youtube ]] && \
 			mkdir -pv Youtube && cd Youtube
 		[[ -n "$ytbraw" ]] && set_yt_resolution
+		#"--replace-in-metadata" "'Movie name'" "'%(Movie name)s'" "'$filename'"
 		cmd+=("yt-dlp" "-i" "\"$@\""
 			"--embed-metadata" "--write-thumbnail"
 			"--merge-output-format" "mkv"
@@ -107,9 +108,10 @@ _yt_dlp() {
 			"$resolution"
 			"${collector[@]}")
 		eval $(printf "%s " "${cmd[@]}")
-		ffmpeg -i "$filename.webp" "$filename.jpg" && rm "$filename.webp"
+		[[ -f "$filename.webp" ]] &&
+			ffmpeg -i "$filename.webp" "$filename.jpg" &&
+			rm "$filename.webp"
 	fi
-	[[ -n ytbraw ]] && embedtranscription "$@"
-
-	#recreatetimestamp
+	[[ -n $ytbraw ]] && embedtranscription "$@"
+	#echo "$filename finished"
 }

@@ -2,7 +2,7 @@
 
 url=$(xclip -selection clipboard -o -print0)
 
-source $HOME/.local/bin/accessoirs/yt-accs
+#source "$HOME/.local/bin/accessoirs/yt-accs"
 
 # its a playlist or a regular video. if not a playlist then regular one-video download.
 # if playlist, no rephrasing of filenames for now and reverse playlist order.

@@ -1,7 +1,47 @@
-#!/bin/sh
+#!/bin/bash
+
+# Set the source and destination directories
+SRC_DIR="/run/mount/usb/WS-853/RECORDER"
+DST_DIR="$HOME/Documents/Voice\ Recorder"
+
+# Create the destination directory if it doesn't exist
+mkdir -p "$DST_DIR"
+
+# Loop through all subdirectories in the source directory
+for SUBFOLDER in "$SRC_DIR"/FOLDER_*
+do
+    # Check if the subfolder is a directory
+    if [ -d "$SUBFOLDER" ]; then
+	mkdir -p "$SUBFOLDER"
+
+        # Loop through all files in the subfolder
+        for FILE in "$SUBFOLDER"/*_*.MP3
+        do
+            # Check if the file matches the filename pattern
+            if [[ "$FILE" =~ [0-9]{6}_[0-9]{4}\.MP3$ ]]; then
+                # Construct the destination file path
+                DST_FILE="$DST_DIR/$(basename ""$SUBFOLDER"")-$(basename ""$FILE"")"
+
+                # Copy the file to the destination
+                echo "Copying $FILE to $DST_FILE"
+                if cp "$FILE" "$DST_FILE"; then
+			# Delete the file from the source
+			echo "Deleting $FILE from the source"
+			rm "$FILE"
+		else
+			echo "Failed to copy $FILE"
+		fi
+            fi
+        done
+    fi
+done
+
+echo "Transfer and deletion complete."
+
+exit 0
 
 recorder_src=$HOME/mounts/WS-853
-recorder_dst=$HOME/Documents/Vioce\ Recorder
+recorder_dst=$HOME/Documents/Voice\ Recorder
 
 sync_recorder() {
 	 rsync -av --remove-source-files $recorder_src $recorder_dst

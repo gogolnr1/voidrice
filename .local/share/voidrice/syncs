@@ -53,6 +53,7 @@ do
         -h|--home)      home=1 ;;
         -n|--nova)      nova=1 ;;
         -g|--gpg)       gpg=1 ;;
+        -r|--recorder)  rec=1 ;;
         *) echo "argument $1" ;;
     esac
     shift
@@ -89,6 +90,7 @@ fi
 [[ -v nova ]] ||\
 [[ -v gpg ]] ||\
 [[ -v books ]] ||\
+[[ -v rec ]] ||\
 [[ -v documents ]] ||\
 	all=1
 
@@ -110,12 +112,14 @@ rsync_arguments_restore="-aP --ignore-existing --exclude '.local/bin/'"
 
 _rsync () {
   echo ""
-  echo "------ start sync -------"
+  #echo "------ start sync -------"
   rsync --dry-run "$@"
   #rsync --dry-run "$@" --stats | grep "Number of created files"
   #rsync --dry-run "$@"|grep denied
   [[ -v wet ]] && rsync "$@" || printf "\n%s\n" "Command: rsync $*"
-  echo "------- end sync --------"
+  #echo "------- end sync --------"
+  echo ""
+  echo ""
 }
 
 _gpg_keys() {
@@ -173,6 +177,11 @@ backup_home () {
   fi
 }
 
+### recorder transfer ###
+recorder_transfer () {
+  printf "\nrecorder:\n"
+}
+
 ### stick-to-stick backup ###
 stick_to_stick () {
   printf "\nsticks:\n"
@@ -217,13 +226,16 @@ backup_movies () {
     if [ -d $BACKUP_DATA ]; then
       _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA}/Videos
 
-      read -p 'Clear Movies? ' clearm
+      read -p 'Clear Movies an Series? ' clearm
       if [[ $clearm == "y" ]]; then
-        _rsync ${rsync_arguments_media} \
-		--remove-source-files \
-		${HOME_DIR}/Videos/Movies/ \
-		${BACKUP_DATA}/Videos/Movies && \
-        find ${BACKUP_DATA}/Videos/Movies/* -type d -empty -delete
+	for what in Movies Series; do
+          _rsync ${rsync_arguments_media} \
+	    --remove-source-files --quiet \
+	    ${HOME_DIR}/Videos/$what/ \
+	    ${BACKUP_DATA}/Videos/$what && \
+            find ${BACKUP_DATA}/Videos/$what/* -type d -empty -delete
+	  [ $? -eq 0 ] && echo "$what cleared." || echo "something went wrong..."
+        done
       fi
     fi
     set +e
