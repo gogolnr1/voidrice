@@ -20,7 +20,7 @@ def scan_directory(directory):
         filepath = os.path.join(directory, file)
         if os.path.isfile(filepath):
             abstract = generate_abstract(filepath)
-            abstracts.append(f"Filename: {file}\n{abstract}\n{'-' * 80}\n")
+            abstracts.append(f"{file}\n{abstract}\n")
     return "\n".join(abstracts)
 
 
@@ -67,11 +67,11 @@ def extract_imports(tree):
     for node in tree.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
-                imports.append(f"  - Standard library: {alias.name}")
+                imports.append(f"  - {alias.name}")
         elif isinstance(node, ast.ImportFrom):
             module = node.module or ""
             for alias in node.names:
-                imports.append(f"  - From {module}: {alias.name}")
+                imports.append(f"  - {module}.{alias.name}")
     return imports
 
 
@@ -103,29 +103,23 @@ def generate_abstract(filepath):
     # File purpose
     docstring = ast.get_docstring(tree)
     if docstring:
-        output.append("File Purpose:")
         output.append(f"  - {docstring}\n")
 
     # Dependencies
     imports = extract_imports(tree)
     if imports:
-        output.append("Dependencies:")
         output.extend(imports)
-        output.append("")  # Blank line for formatting
 
     # Globals and constants
     globals_and_constants = analyze_globals(tree)
     if globals_and_constants:
-        output.append("Global Variables and Constants:")
         output.extend(globals_and_constants)
-        output.append("")  # Blank line for formatting
 
     # Classes, methods, variables
     class_details = []
     for node in tree.body:
         class_details.extend(analyze_node(node))
     if class_details:
-        output.append("Classes:")
         output.extend(class_details)
 
     return "\n".join(output)
