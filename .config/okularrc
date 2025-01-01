@@ -1,0 +1,44 @@
+1422x1067 screen: Height=1067
+1422x1067 screen: Width=1422
+1422x1067 screen: XPosition=0
+1422x1067 screen: YPosition=0
+2 screens: Height=1044
+2 screens: Width=1417
+2 screens: XPosition=1369
+2 screens: YPosition=20
+HDMI-A-0=HDMI-A-0
+HDMI-A-0 eDP=HDMI-A-0
+State=AAAA/wAAAAD9AAAAAQAAAAAAAADIAAADpfwCAAAAAfsAAAAcAG8AawB1AGwAYQByAF8AcwBpAGQAZQBiAGEAcgAAAABdAAADpQAAANwA///+AAAFiQAAA7cAAAAEAAAABAAAAAgAAAAI/AAAAAMAAAABAAAAAQAAACwAcQB1AGkAYwBrAEEAbgBuAG8AdABhAHQAaQBvAG4AVABvAG8AbABCAGEAcgIAAAAA/////wAAAAAAAAAAAAAAAgAAAAEAAAAWAG0AYQBpAG4AVABvAG8AbABCAGEAcgEAAAAA/////wAAAAAAAAAAAAAAAgAAAAEAAAAiAGEAbgBuAG8AdABhAHQAaQBvAG4AVABvAG8AbABCAGEAcgEAAAAA/////wAAAAAAAAAA
+
+[Desktop Entry]
+FullScreen=false
+
+[General]
+LockSidebar=true
+ShowSidebar=true
+
+[MainWindow]
+1422x1067 screen: Height=1044
+1422x1067 screen: Width=1417
+1422x1067 screen: XPosition=0
+1422x1067 screen: YPosition=18
+1707x960 screen: Height=937
+1707x960 screen: Width=933
+1707x960 screen: XPosition=3
+1707x960 screen: YPosition=20
+2 screens: Height=1044
+2 screens: Width=1417
+2 screens: XPosition=1369
+2 screens: YPosition=20
+HDMI-A-0=HDMI-A-0
+HDMI-A-0 eDP=HDMI-A-0
+State=AAAA/wAAAAD9AAAAAQAAAAAAAADIAAADTPwCAAAAAfsAAAAcAG8AawB1AGwAYQByAF8AcwBpAGQAZQBiAGEAcgEAAABdAAADTAAAANwA///+AAAC1wAAA0wAAAAEAAAABAAAAAgAAAAI/AAAAAMAAAABAAAAAQAAACwAcQB1AGkAYwBrAEEAbgBuAG8AdABhAHQAaQBvAG4AVABvAG8AbABCAGEAcgIAAAAA/////wAAAAAAAAAAAAAAAgAAAAEAAAAWAG0AYQBpAG4AVABvAG8AbABCAGEAcgEAAAAA/////wAAAAAAAAAAAAAAAgAAAAEAAAAiAGEAbgBuAG8AdABhAHQAaQBvAG4AVABvAG8AbABCAGEAcgEAAAAA/////wAAAAAAAAAA
+ToolBarsMovable=Disabled
+
+[Recent Files]
+File1[$e]=$HOME/Projects/Osteopathie/Paracelsus/Skripte/NOTFALLEINDERNHPAKTUELLPDF.PDF
+File2[$e]=/run/mount/41G-PART/Documents/Vitalität pur durch Heilfasten -- Von René Gräber, Heilpraktiker und Gesundheitspädagoge -- 2015 -- 511274efcc20408d6c5b9ab3813f83ea -- Anna’s Archive.pdf
+File3[$e]=$HOME/mounts/500G-VERBATIM/Vault/main/Metabolic health, Hormones and bloodsugar regulation - Dr. Casey Means &  Andrew Huberman.md
+Name1[$e]=NOTFALLEINDERNHPAKTUELLPDF.PDF
+Name2[$e]=Vitalität pur durch Heilfasten -- Von René Gräber, Heilpraktiker und Gesundheitspädagoge -- 2015 -- 511274efcc20408d6c5b9ab3813f83ea -- Anna’s Archive.pdf
+Name3[$e]=Metabolic health, Hormones and bloodsugar regulation - Dr. Casey Means &  Andrew Huberman.md

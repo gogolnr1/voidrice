@@ -75,10 +75,11 @@ overwrite () {
 
 # determine which tool to use
 case $get_url in
-	*"youtu"*) yt=1 && ytbraw=1 ;;
+	*".youtu"*) yt=1 && ytbraw=1 ;;
+	*"/youtu"*) yt=1 && ytbraw=1 ;;
 	"curl "*) crl=1 ;;
- 	*".m3u8"*) yt=1 ;;
-	"http"* ) wgt=1 ;;
+	"http"* ) wgt=1 ;;&
+ 	*".m3u8"*) yt=1 && unset wgt ;;
 	*       )
 		echo "Clipboard content has no valid download pattern. Exiting."
 		exit 0
