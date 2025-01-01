@@ -8,6 +8,8 @@ require('dap_init')
 require('bufferline_config').setup()
 require('session_config').setup()
 require('codet5_config').setup()
+require('keybindings').setup()
+require('quit_config').setup()
 
 -- Setup black formatter
 vim.g.neoformat_python_black = {
