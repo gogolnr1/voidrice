@@ -5,13 +5,15 @@
 # `sudo usermod -a -G video toto`
 
 bfl=/sys/class/backlight/intel_backlight
+bfl=/sys/class/backlight/amdgpu_bl1
+#bfl=/sys/class/backlight/radeon_bl0
 [[ $(stat -L -c "%a" ${bfl}/brightness) -ne 666 ]] &&
     chmod 666 ${bfl}/brightness
     #sudo chmod 666 ${bfl}/brightness
 
 # Steps for raising/lowering brightness
-STEP=100
-BIG_STEP=250
+STEP=50
+BIG_STEP=125
 
 current_brightness_value=$(cat ${bfl}/brightness)
 max_brightness_value=$(cat ${bfl}/max_brightness)

@@ -1,0 +1,142 @@
+#!/bin/python
+
+import ast
+import os
+import sys
+import subprocess
+
+
+def scan_directory(directory):
+    """Scan a directory for Python files tracked by Git and generate abstracts."""
+    try:
+        # Use git to list all tracked Python files
+        git_files = subprocess.check_output(['git', 'ls-files', '*.py'], cwd=directory).decode('utf-8').splitlines()
+    except subprocess.CalledProcessError:
+        print("Failed to retrieve files tracked by git.")
+        return ""
+
+    abstracts = []
+    for file in git_files:
+        filepath = os.path.join(directory, file)
+        if os.path.isfile(filepath):
+            abstract = generate_abstract(filepath)
+            abstracts.append(f"{file}\n{abstract}\n")
+    return "\n".join(abstracts)
+
+
+def analyze_node(node, indent=0):
+    """Recursively analyze AST nodes and extract details."""
+    output = []
+    if isinstance(node, ast.ClassDef):
+        output.append(f"{node.lineno}: {'  ' * indent}Class: {node.name}")
+        docstring = ast.get_docstring(node)
+        if docstring:
+            output.append(f"{node.lineno + 1}: {'  ' * (indent + 1)}Docstring: {docstring}")
+        for n in node.body:
+            output.extend(analyze_node(n, indent + 1))
+    elif isinstance(node, ast.FunctionDef):
+        args = [arg.arg for arg in node.args.args]
+        output.append(f"{node.lineno}: {'  ' * indent}Method: {node.name}({', '.join(args)})")
+        docstring = ast.get_docstring(node)
+        if docstring:
+            output.append(f"{node.lineno + 1}: {'  ' * (indent + 1)}Docstring: {docstring}")
+        for n in node.body:
+            if isinstance(n, ast.Return):
+                output.append(f"{n.lineno}: {'  ' * (indent + 1)}Returns: {ast.dump(n.value)}")
+            elif isinstance(n, ast.Expr):
+                output.append(f"{n.lineno}: {'  ' * (indent + 1)}Expression: {ast.dump(n.value)}")
+            elif isinstance(n, ast.If):
+                output.append(f"{n.lineno}: {'  ' * (indent + 1)}Conditional: If {ast.dump(n.test)}")
+            elif isinstance(n, ast.For):
+                output.append(f"{n.lineno}: {'  ' * (indent + 1)}For loop: Iterates over {ast.dump(n.iter)}")
+            elif isinstance(n, ast.Call):
+                output.append(f"{n.lineno}: {'  ' * (indent + 1)}Function Call: {ast.dump(n)}")
+    elif isinstance(node, ast.Assign):
+        targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+        for target in targets:
+            value_repr = ast.dump(node.value) if hasattr(node.value, 'id') else str(node.value)
+            output.append(f"{node.lineno}: {'  ' * indent}Variable: {target} = {value_repr}")
+    elif isinstance(node, ast.Expr) and isinstance(node.value, ast.Str):
+        output.append(f"{node.lineno}: {'  ' * indent}Comment: {node.value.s}")
+    return output
+
+
+def extract_imports(tree):
+    """Extract imports from the AST."""
+    imports = []
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports.append(f"  - {alias.name}")
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            for alias in node.names:
+                imports.append(f"  - {module}.{alias.name}")
+    return imports
+
+
+def analyze_globals(tree):
+    """Extract global variables and constants."""
+    globals_and_constants = []
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+            for target in targets:
+                if target.isupper():
+                    globals_and_constants.append(f"  - Constant: {target} = {ast.dump(node.value)}")
+                else:
+                    globals_and_constants.append(f"  - Global Variable: {target} = {ast.dump(node.value)}")
+    return globals_and_constants
+
+
+def generate_abstract(filepath):
+    """Generate an enriched abstract of a Python file."""
+    try:
+        with open(filepath, "r") as file:
+            code = file.read()
+    except (OSError, UnicodeDecodeError):
+        return f"Error reading file: {filepath}"
+
+    tree = ast.parse(code)
+    output = []
+
+    # File purpose
+    docstring = ast.get_docstring(tree)
+    if docstring:
+        output.append(f"  - {docstring}\n")
+
+    # Dependencies
+    imports = extract_imports(tree)
+    if imports:
+        output.extend(imports)
+
+    # Globals and constants
+    globals_and_constants = analyze_globals(tree)
+    if globals_and_constants:
+        output.extend(globals_and_constants)
+
+    # Classes, methods, variables
+    class_details = []
+    for node in tree.body:
+        class_details.extend(analyze_node(node))
+    if class_details:
+        output.extend(class_details)
+
+    return "\n".join(output)
+
+
+def main():
+    if len(sys.argv) < 2:
+        directory = os.getcwd()  # Default to current working directory
+    else:
+        directory = sys.argv[1]
+
+    if os.path.isdir(directory):
+        abstracts = scan_directory(directory)
+        print(abstracts)
+    else:
+        print(f"Invalid directory: {directory}")
+
+
+if __name__ == "__main__":
+    main()

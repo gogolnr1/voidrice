@@ -1,7 +1,7 @@
 #!/bin/sh
 
-[ -f ${LOCAL_CONFIG}/.nvidia-xinit ] && sh ${LOCAL_CONFIG}/.nvidia-xinit
-[ -f ${LOCAL_CONFIG}/.monitors-xinit ] && sh ${LOCAL_CONFIG}/.monitors-xinit
+[ -f ${XDG_CONFIG_HOME}/.nvidia-xinit ] && sh ${XDG_CONFIG_HOME}/.nvidia-xinit
+[ -f ${XDG_CONFIG_HOME}/.monitors-xinit ] && sh ${XDG_CONFIG_HOME}/.monitors-xinit
 
 export HI_DPI_FACTOR=2
 

@@ -1,0 +1,27 @@
+keybindings.vim:
+" Set leader key to space
+let mapleader = ","
+
+" Smooth Cursor Control
+nnoremap j gj                          " Move cursor down by line (wrap lines properly)
+nnoremap k gk                          " Move cursor up by line (wrap lines properly)
+
+" Line Movement (using Ctrl)
+nnoremap <C-j> j                       " Use Ctrl+j to move down
+nnoremap <C-k> k                       " Use Ctrl+k to move up
+
+" FZF (file search)
+nnoremap <leader>ff :Files<CR>
+
+" Clear search highlights
+nnoremap <leader>nh :nohlsearch<CR>    " Clear search highlight
+
+" Telescope Keybindings
+nnoremap <leader>fg :Telescope live_grep<CR>
+nnoremap <leader>fb :Telescope buffers<CR>
+nnoremap <leader>fs :Telescope current_buffer_fuzzy_find<CR>
+nnoremap <leader>fh :Telescope help_tags<CR>
+nnoremap <leader>fc :Telescope commands<CR>
+nnoremap <leader>fk :Telescope keymaps<CR>
+nnoremap <leader>ft :Telescope tags<CR>
+nnoremap <leader>fn :Telescope find_files search_dir=~/.config/nvim<CR>

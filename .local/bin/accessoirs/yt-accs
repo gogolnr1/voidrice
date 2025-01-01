@@ -108,10 +108,8 @@ _yt_dlp() {
 			"$resolution"
 			"${collector[@]}")
 		eval $(printf "%s " "${cmd[@]}")
-		[[ -f "$filename.webp" ]] &&
-			ffmpeg -i "$filename.webp" "$filename.jpg" &&
-			rm "$filename.webp"
+		[[ -f $filename.webp ]] &&
+			ffmpeg -i "$filename.webp" "$filename.jpg" && rm "$filename.webp"
 	fi
-	[[ -n $ytbraw ]] && embedtranscription "$@"
-	#echo "$filename finished"
+	#[[ -n ytbraw ]] && embedtranscription "$@"
 }
