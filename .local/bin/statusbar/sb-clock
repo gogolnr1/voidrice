@@ -30,20 +30,21 @@ esac
 current_hour=$(date "+%H")
 current_minute=$(date "+%M")
 
-# Check if the current time matches the target time
-#!/bin/bash
-
-input_file="input.mp3"
-start_time="00:01:30"  # Start playing from 1 minute and 30 seconds
-
 [[ "$current_hour" -eq 18 && "$current_minute" -eq 30 ]] && \
 	notify-send "Time to call it a day soon..." && \
-	ffmpeg -i "$HOME/r2d2.mp3" -ss "00:00:02" -to "00:00:07" -af "volume=5"  -f mp3 - | ffplay -nodisp -autoexit - 2>/dev/null
+	ffmpeg -i "$HOME/r2d2.mp3" -ss "00:00:02" -to "00:00:07" -af "volume=3"  -f mp3 - | ffplay -nodisp -autoexit - >/dev/null 2>&1
 [[ "$current_hour" -eq 18 && "$current_minute" -eq 45 ]] && \
 	notify-send "Time to call it a day in 15 Minutes!" && \
-	ffmpeg -i "$HOME/r2d2.mp3" -ss "00:00:08" -to "00:00:12" -af "volume=5"  -f mp3 - | ffplay -nodisp -autoexit - 2>/dev/null
+	ffmpeg -i "$HOME/r2d2.mp3" -ss "00:00:08" -to "00:00:12" -af "volume=3"  -f mp3 - | ffplay -nodisp -autoexit - >/dev/null 2>&1
 [[ "$current_hour" -eq 19 && "$current_minute" -eq 0 ]] && \
 	notify-send "You really need to close down NOW!" && \
-	ffmpeg -i "$HOME/r2d2.mp3" -ss "00:00:15.5" -to "00:00:18" -af "volume=5"  -f mp3 - | ffplay -nodisp -autoexit - 2>/dev/null
+	ffmpeg -i "$HOME/r2d2.mp3" -ss "00:00:15.5" -to "00:00:18" -af "volume=2"  -f mp3 - | ffplay -nodisp -autoexit - >/dev/null 2>&1
+
+# write a file that indicates a running timer
+# that file exists as long as the timer is not finished
+# the timer is initiated via the creation of the indication file
+# the timer is finished when a certain date/time is reached
+# this can be days or even years but also just seconds
+# to set the duration of the timer a fzf selection
 
 date "+%b %d (%a) $icon%H:%M"

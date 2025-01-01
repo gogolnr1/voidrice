@@ -72,8 +72,8 @@
 #def_key "delete"
 #  delete_playlist_items
 #
-#def_key "delete"
-#  delete_browser_items
+def_key "shift-delete"
+  delete_browser_items
 #
 #def_key "delete"
 #  delete_stored_playlist
