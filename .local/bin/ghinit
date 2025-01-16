@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Exit on any error
+set -e
+
+# Check if repository title is provided
+if [ -z "$1" ]; then
+  echo "Usage: $0 <repository_title>"
+  exit 1
+fi
+
+REPO_TITLE=$1
+GITHUB_USER=${GITHUB_USER:-}
+SSH_KEY_PATH=${SSH_KEY_PATH:-~/.ssh/id_ed25519}
+GH_CLI=$(which gh || true)
+
+# Function to check and install GitHub CLI using pacman
+install_github_cli() {
+  if [ -z "$GH_CLI" ]; then
+    echo "GitHub CLI not found. Installing with pacman..."
+    sudo pacman -Sy --needed --noconfirm github-cli
+    GH_CLI=$(which gh)
+  fi
+}
+
+# Function to configure GitHub CLI if not already configured
+configure_github_cli() {
+  if ! $GH_CLI auth status &>/dev/null; then
+    echo "GitHub CLI not configured. Configuring now..."
+    $GH_CLI auth login
+    echo "Setting GitHub CLI protocol to SSH..."
+    $GH_CLI config set -h github.com git_protocol ssh
+  fi
+}
+
+# Function to check and generate SSH key
+generate_ssh_key() {
+  if [ ! -f $SSH_KEY_PATH ]; then
+    echo "No SSH key found at $SSH_KEY_PATH. Generating a new one..."
+    ssh-keygen -t ed25519 -C "${GITHUB_USER}@users.noreply.github.com" -f $SSH_KEY_PATH -N ""
+    eval "$(ssh-agent -s)"
+    ssh-add $SSH_KEY_PATH
+    echo "Adding SSH key to GitHub account..."
+    $GH_CLI ssh-key add $SSH_KEY_PATH.pub --title "GitHub CLI"
+  else
+    echo "SSH key already exists at $SSH_KEY_PATH."
+  fi
+}
+
+# Function to create and push a GitHub repository
+create_and_push_repository() {
+  echo "Creating repository '$REPO_TITLE' on GitHub..."
+  $GH_CLI repo create "$REPO_TITLE" --public --source=. --push
+}
+
+# Main script execution
+echo "Starting GitHub repository setup..."
+install_github_cli
+configure_github_cli
+generate_ssh_key
+create_and_push_repository
+
+echo "Repository setup completed successfully!"
+
