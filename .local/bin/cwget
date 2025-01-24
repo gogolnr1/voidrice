@@ -78,8 +78,8 @@ case $get_url in
 	*".youtu"*) yt=1 && ytbraw=1 ;;
 	*"/youtu"*) yt=1 && ytbraw=1 ;;
 	"curl "*) crl=1 ;;
-	"http"* ) wgt=1 ;;&
- 	*".m3u8"*) yt=1 && unset wgt ;;
+ 	*".m3u8"*) yt=1 && unset wgt ;;&
+	"http"* ) wgt=1 ;;
 	*       )
 		echo "Clipboard content has no valid download pattern. Exiting."
 		exit 0
@@ -133,10 +133,13 @@ fi
 
 ################################################
 
+yt=1 # seems as if this is the new standard now...
+
 # if m3u8 or youtube link, use yt-dlp
 if [[ -n $yt ]]; then
 	#$TERMINAL -e bash -c "sleep 8; mpv '$PWD/$filename.part'; $SHELL" &
 	_yt_dlp "$get_url"
+	exit 0
 fi
 
 # use wget
