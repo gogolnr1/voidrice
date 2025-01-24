@@ -3,368 +3,366 @@
 # .local/share/voidrice gitify
 # yandex-disk & dropbox
 
-# check for backup devices to use
-readonly BACKUP_LARGE="800G-GRAUGEAR 500G-VERBATIM"
-for device in $BACKUP_LARGE; do
-	[[ -d /run/mount/usb/$device ]] && [[ $(df -h | grep "/run/mount/usb/$device") ]] &&
-		BACKUP_DATA="/run/mount/usb/$device" && continue
+# =========================
+# Configuration Variables
+# =========================
+
+# Backup device sizes and identifiers
+readonly BACKUP_LARGE=( "800G-GRAUGEAR" "500G-VERBATIM" "1T-KINGSTON" )
+
+# Directory paths
+readonly HOME_DIR="/home/$USER"
+readonly MUSIC_DIR="/run/mount/41G-PART/Musik"
+readonly BACKUP_STICK1="/run/mount/usb/32G-SANDISK"
+readonly BACKUP_STICK2="/run/mount/usb/16G-VERBATIM"
+readonly BACKUP_MTP1="$HOME_DIR/.local/run/mount/nova-air"
+
+# GPG key identifiers
+readonly GPG_NAMES=( 'AEA64026B34D3924C225ED6E259B91BF34A53F38' )
+
+# =========================
+# Initialize Backup Data Path
+# =========================
+
+# Check for available backup devices
+for device in "${BACKUP_LARGE[@]}"; do
+    if [[ -d /run/mount/usb/$device ]] && df -h | grep -q "/run/mount/usb/$device"; then
+        BACKUP_DATA="/run/mount/usb/$device"
+        break
+    fi
 done
 echo "Device: $BACKUP_DATA"
 
-readonly HOME_DIR="/home/$USER"
-readonly MUSIC_DIR="/run/mount/41G-PART/Musik"
+# =========================
+# Action Determination
+# =========================
 
-readonly BACKUP_STICK1="/run/mount/usb/32G-SANDISK"
-readonly BACKUP_STICK2="/run/mount/usb/16G-VERBATIM"
-
-readonly BACKUP_MTP1="$HOME_DIR/.local/run/mount/nova-air"
-readonly GPG_NAMES=( 'AEA64026B34D3924C225ED6E259B91BF34A53F38' )
-
-# try to intelligently set action to be performed
-# if no parameters set
+# Set action based on current directory if no arguments are provided
 if [[ $# -eq 0 ]]; then
-  # relative home path
-  currentdir="${PWD#"$HOME"/}"
-  # very first parent dir
-  parentdir="${currentdir%%/*}"
+    currentdir="${PWD#"$HOME"/}"
+    parentdir="${currentdir%%/*}"
 
-  case "$parentdir" in
-    Projects) projects=1 ;;
-    Videos) videos=1 ;;
-    *) echo "no action to perform" && exit 0 ;;
-  esac
+    case "$parentdir" in
+        Projects) projects=1 ;;
+        Videos) videos=1 ;;
+        *) echo "No action to perform" && exit 0 ;;
+    esac
 
-  printf "Found specific sync folder \"$currentdir\".\n\n"
+    printf "Found specific sync folder \"$currentdir\".\n\n"
 fi
 
-# check options
-#dry=1
-while test $# -gt 0
-do
-    case "$1" in
-        restore) restore=1 ;;
-        dry) dry=1 ;;
-        wet) wet=1 ;;
-        -d|--documents) docs=1 ;;
-        -b|--books)     books=1 ;;
-        -m|--music)     music=1 ;;
-        -v|--videos)    videos=1 ;;
-        -p|--projects)  projects=1 ;;
-        -h|--home)      home=1 ;;
-        -n|--nova)      nova=1 ;;
-        -g|--gpg)       gpg=1 ;;
-        -r|--recorder)  rec=1 ;;
-        *) echo "argument $1" ;;
+# Parse command-line options using getopts
+while getopts ":rdwhbmvpgn" opt; do
+    case $opt in
+        r) restore=1 ;;
+        d) docs=1 ;;
+        w) wet=1 ;;
+        h) home=1 ;;
+        b) books=1 ;;
+        m) music=1 ;;
+        v) videos=1 ;;
+        p) projects=1 ;;
+        g) gpg=1 ;;
+        n) nova=1 ;;
+        *) echo "Unknown option: -$OPTARG" ;;
     esac
-    shift
 done
+shift $((OPTIND -1))
 
+# Prompt for action if neither dry nor wet is set
 if [[ ! -v dry ]] && [[ ! -v wet ]]; then
-  PS3="Select action: "
-
-  select action in dry-run wet-swim quit; do
-    case $action in
-      dry-run)
-        dry=1 && break
-        ;;
-      wet-swim)
-        wet=1 && break
-        ;;
-      quit)
-        exit 0
-        ;;
-      *)
-        echo "Invalid option $REPLY"
-        ;;
-    esac
-  done
+    PS3="Select action: "
+    select action in dry-run wet-swim quit; do
+        case $action in
+            dry-run) dry=1 && break ;;
+            wet-swim) wet=1 && break ;;
+            quit) exit 0 ;;
+            *) echo "Invalid option $REPLY" ;;
+        esac
+    done
 fi
 
-# if none of the variables is set then sync all
-[[ -v home ]] ||\
-[[ -v docs ]] ||\
-[[ -v books ]] ||\
-[[ -v music ]] ||\
-[[ -v videos ]] ||\
-[[ -v projects ]] ||\
-[[ -v nova ]] ||\
-[[ -v gpg ]] ||\
-[[ -v books ]] ||\
-[[ -v rec ]] ||\
-[[ -v documents ]] ||\
-	all=1
+# Determine if all backup options should be executed
+if [[ -z $home && -z $docs && -z $books && -z $music && -z $videos &&
+      -z $projects && -z $nova && -z $gpg && -z $rec && -z $documents ]]; then
+    all=1
+fi
 
-# -a = --archive
-# -P = --partial --progress
-# -b = backup files that exist in both folders
-# -u = skip files which are newer in dest than in src
-# --delete deletes on destination side
-# --delete-excluded deletes "non-empty" folders on destination side
-# --copy-links includes rules that lead to symbolicaly linked locations
-# --ignore-existing ignores existing files on destination side
-#rsync_arguments_home="-aP --delete --delete-excluded --copy-links"
-rsync_arguments_home="-aP --delete \
-	--backup --backup-dir=.DELETED_FILES_$(date "+%Y_%m_%d-%H_%M_%S") \
-	--copy-links"
+# =========================
+# Rsync Argument Definitions
+# =========================
+
+rsync_arguments_home="-aP --delete --backup --backup-dir=.DELETED_FILES_$(date "+%Y_%m_%d-%H_%M_%S") --copy-links"
 rsync_arguments_media="-aP --copy-links"
 rsync_arguments_projects="-abuP --copy-links"
 rsync_arguments_restore="-aP --ignore-existing --exclude '.local/bin/'"
 
+# =========================
+# Helper Functions
+# =========================
+
+# Function to execute rsync with appropriate logging
 _rsync () {
-  echo ""
-  #echo "------ start sync -------"
-  rsync --dry-run "$@"
-  #rsync --dry-run "$@" --stats | grep "Number of created files"
-  #rsync --dry-run "$@"|grep denied
-  [[ -v wet ]] && rsync "$@" || printf "\n%s\n" "Command: rsync $*"
-  echo "------- end sync --------"
-  echo ""
-  echo ""
+    echo ""
+    rsync --dry-run "$@"
+    if [[ -v wet ]]; then
+        rsync "$@" || { echo "Rsync failed for $*"; exit 1; }
+    else
+        printf "\nCommand: rsync $*\n"
+    fi
+    echo "------- end sync --------"
+    echo ""
+    echo ""
 }
 
+# Function to handle GPG key backup and restoration
 _gpg_keys() {
-  [[ -d ${BACKUP_STICK2} ]] || return 1
+    [[ -d ${BACKUP_STICK2} ]] || return 1
 
-  if [[ $1 = --backup ]]; then
-    mkdir -p ${BACKUP_STICK2}/gnupg
+    if [[ $1 == --backup ]]; then
+        mkdir -p "${BACKUP_STICK2}/gnupg"
+        if [[ -v wet ]]; then
+            gpg --export-ownertrust > "${BACKUP_STICK2}/gnupg/trustdb-backup.txt"
+            echo "Ownertrust exported."
 
-    [[ -v wet ]] &&
-      gpg --export-ownertrust > ${BACKUP_STICK2}/gnupg/trustdb-backup.txt
-          echo "Ownertrust exported."
-
-    for name in $GPG_NAMES; do
-      if [[ -v wet ]]; then
-        gpg --export-secret-keys --armor ${name} > ${BACKUP_STICK2}/gnupg/${name}-backup.asc &&
-          echo "$name key exported."
-      else
-        gpg --list-secret-keys ${name}
-      fi
-    done
-  fi
-  if [[ $1 = --restore ]]; then
-    for name in $GPG_NAMES; do
-      gpg --import ${BACKUP_STICK2}/gnupg/${name}-backup.asc &&
-        echo "$name key imported."
-    done
-
-    gpg --import-ownertrust < ${BACKUP_STICK2}/gnupg/trustdb-backup.txt &&
-      echo "Ownertrust imported."
-  fi
+            for name in "${GPG_NAMES[@]}"; do
+                gpg --export-secret-keys --armor "${name}" > "${BACKUP_STICK2}/gnupg/${name}-backup.asc" && \
+                echo "${name} key exported."
+            done
+        else
+            for name in "${GPG_NAMES[@]}"; do
+                gpg --list-secret-keys "${name}"
+            done
+        fi
+    elif [[ $1 == --restore ]]; then
+        for name in "${GPG_NAMES[@]}"; do
+            gpg --import "${BACKUP_STICK2}/gnupg/${name}-backup.asc" && \
+            echo "${name} key imported."
+        done
+        gpg --import-ownertrust < "${BACKUP_STICK2}/gnupg/trustdb-backup.txt" && \
+        echo "Ownertrust imported."
+    fi
 }
 
 backup_gpg_keys() { _gpg_keys --backup; }
 restore_gpg_keys() { _gpg_keys --restore; }
 
-### backup home ###
+# =========================
+# Generic Backup Function
+# =========================
+
+backup_section () {
+    local section=$1
+    local source_dir=$2
+    local dest_dir=$3
+    local rsync_args=$4
+    local filter_file=$5
+
+    printf "\n%s:\n" "$section"
+    
+    if [ -d "$source_dir" ] && [ -d "$dest_dir" ]; then
+        mkdir -p "$dest_dir"
+        if [ -n "$filter_file" ]; then
+            _rsync ${rsync_args} --filter="merge ${filter_file}" "$source_dir/" "$dest_dir"
+        else
+            _rsync ${rsync_args} "$source_dir/" "$dest_dir"
+        fi
+    fi
+}
+
+# =========================
+# Backup Functions
+# =========================
+
+# Backup home directory
 backup_home () {
-  printf "\nhome:\n"
-
-  local home_filter="${HOME_DIR}/.local/share/voidrice/sync_resources/home_filter.txt"
-  local home_excludes="${HOME_DIR}/.local/share/voidrice/sync_resources/home_excludes.txt"
-
-  [ -d "$BACKUP_STICK1" ] && bs="$BACKUP_STICK1" || bs="$BACKUP_DATA/BACKUP_STICK"
-  [ ! -d "$BACKUP_STICK1" ] && mkdir "$BACKUP_DATA/BACKUP_STICK"
-  if [ -d "$bs" ]; then
-    _rsync ${rsync_arguments_home} --filter="merge ${home_filter}" $HOME_DIR/ ${bs}/B
-
-    if [ -d "$HOME_DIR/../rstudio" ]; then
-      _rsync ${rsync_arguments_home} $HOME_DIR/../rstudio/ ${bs}/B/home_rstudio
-    fi
-
-    if [ -d "${HOME_DIR}/ydisk" ]; then
-      _rsync ${rsync_arguments_home} ${HOME_DIR}/ydisk/ ${bs}/ydisk
-    fi
-  fi
+    backup_section "home" "$HOME_DIR" "${BACKUP_DATA}/home" "${rsync_arguments_home}" "${HOME_DIR}/.local/share/voidrice/sync_resources/home_filter.txt"
 }
 
-### recorder transfer ###
+# Recorder transfer (placeholder for future implementation)
 recorder_transfer () {
-  printf "\nrecorder:\n"
+    printf "\nrecorder:\n"
 }
 
-### stick-to-stick backup ###
+# Backup between backup sticks
 stick_to_stick () {
-  printf "\nsticks:\n"
-  local excludes="${HOME_DIR}/.local/share/voidrice/sync_resources/excludes_stick.txt"
+    printf "\nsticks:\n"
+    local excludes="${HOME_DIR}/.local/share/voidrice/sync_resources/excludes_stick.txt"
 
-  if [ -d "$BACKUP_STICK1" ] && [ -d "$BACKUP_STICK2" ]; then
-    _rsync ${rsync_arguments_home} --exclude-from="${excludes}" $BACKUP_STICK1 $BACKUP_STICK2
-  fi
+    if [ -d "$BACKUP_STICK1" ] && [ -d "$BACKUP_STICK2" ]; then
+        _rsync ${rsync_arguments_home} --exclude-from="${excludes}" "$BACKUP_STICK1" "$BACKUP_STICK2"
+    fi
 
-  if [ -d "$BACKUP_STICK1" ] && [ -d "$BACKUP_DATA" ]; then
-    _rsync ${rsync_arguments_home} --exclude-from="${excludes}" $BACKUP_STICK1/ $BACKUP_DATA/BACKUP_STICK
-  fi
+    if [ -d "$BACKUP_STICK1" ] && [ -d "$BACKUP_DATA" ]; then
+        _rsync ${rsync_arguments_home} --exclude-from="${excludes}" "$BACKUP_STICK1/" "$BACKUP_DATA/BACKUP_STICK"
+    fi
 }
 
+# Backup music directory
 backup_music () {
-  printf "\nmusic:\n"
-  if [ -d "$HOME_DIR/Music" ] && [ -d "$BACKUP_DATA" ]; then
-    [ ! -d "$BACKUP_DATA/Music" ] && mkdir "$BACKUP_DATA/Music"
-    _rsync ${rsync_arguments_media} ${HOME_DIR}/Music/ ${BACKUP_DATA}/Music
-  fi
+    backup_section "music" "${HOME_DIR}/Music" "${BACKUP_DATA}/Music" "${rsync_arguments_media}" ""
 }
 
+# Backup documents and pictures
 backup_documents () {
-  printf "\ndocuments:\n"
-  if [ -d "$HOME_DIR/Documents" ]; then
-    if [ -d "$BACKUP_STICK1" ]; then
-      _rsync ${rsync_arguments_home} ${HOME_DIR}/Documents/ ${BACKUP_STICK1}/D
-      _rsync ${rsync_arguments_home} ${HOME_DIR}/Pictures/ ${BACKUP_STICK1}/P
-    elif [ -d "$BACKUP_DATA" ]; then
-      [ ! -d "$BACKUP_DATA/BACKUP_STICK" ] && mkdir "$BACKUP_DATA/BACKUP_STICK"
-      _rsync ${rsync_arguments_home} ${HOME_DIR}/Documents/ ${BACKUP_DATA}/BACKUP_STICK/D
-      _rsync ${rsync_arguments_home} ${HOME_DIR}/Pictures/ ${BACKUP_DATA}/BACKUP_STICK/P
-    fi
-  fi
+    backup_section "documents" "$HOME_DIR/Documents" "${BACKUP_DATA}/Documents" "${rsync_arguments_home}" "${HOME_DIR}/.local/share/voidrice/sync_resources/documents_filter.txt"
 }
 
+# Backup movies and series
 backup_movies () {
-  printf "\nmovies:\n"
-  local videos_filter="${HOME_DIR}/.local/share/voidrice/sync_resources/videos_filter.txt"
-  if [ -d "$HOME_DIR/Videos" ]; then
-    set -e
-    if [ -d $BACKUP_DATA ]; then
-      _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" ${HOME_DIR}/Videos/ ${BACKUP_DATA}/Videos
+    printf "\nmovies:\n"
+    local videos_filter="${HOME_DIR}/.local/share/voidrice/sync_resources/videos_filter.txt"
 
-      read -p 'Clear Movies an Series? ' clearm
-      if [[ $clearm == "y" ]]; then
-	for what in Movies Series; do
-          _rsync ${rsync_arguments_media} \
-	    --remove-source-files --quiet \
-	    ${HOME_DIR}/Videos/$what/ \
-	    ${BACKUP_DATA}/Videos/$what && \
-            find ${BACKUP_DATA}/Videos/$what/* -type d -empty -delete
-	  [ $? -eq 0 ] && echo "$what cleared." || echo "something went wrong..."
-        done
-      fi
+    if [ -d "$HOME_DIR/Videos" ] && [ -d "$BACKUP_DATA" ]; then
+        set -e
+        _rsync ${rsync_arguments_media} --filter="merge ${videos_filter}" "${HOME_DIR}/Videos/" "${BACKUP_DATA}/Videos"
+
+        read -p 'Clear Movies and Series? (y/n) ' clearm
+        if [[ $clearm == "y" ]]; then
+            for what in Movies Series; do
+                _rsync ${rsync_arguments_media} --remove-source-files --quiet "${HOME_DIR}/Videos/$what/" "${BACKUP_DATA}/Videos/$what" && \
+                find "${BACKUP_DATA}/Videos/$what/" -type d -empty -delete
+                if [[ $? -eq 0 ]]; then
+                    echo "$what cleared."
+                else
+                    echo "Something went wrong with $what."
+                fi
+            done
+        fi
+        set +e
     fi
-    set +e
-  fi
 }
 
+# Backup books (Calibre Library)
 backup_books () {
-  printf "\nbooks:\n"
-  local dirname="Calibre Library"
-  if [ -d "$HOME_DIR/$dirname" ]; then
-    if [ -d "$BACKUP_DATA" ]; then
-      _rsync ${rsync_arguments_media} "$HOME_DIR/$dirname" "$BACKUP_DATA/dirname"
+    printf "\nbooks:\n"
+    local dirname="Calibre Library"
+    if [ -d "$HOME_DIR/$dirname" ] && [ -d "$BACKUP_DATA" ]; then
+        _rsync ${rsync_arguments_media} "$HOME_DIR/$dirname" "$BACKUP_DATA/dirname"
     fi
-  fi
 }
 
-restore_home () {
-  printf "\nrestore:\n"
-
-  if [ -d ".config/BraveSoftware/Brave-Browser" ]; then echo ".mozilla exists, skip..."; else
-	  if [ -d "$BACKUP_DISK2/Volatile/.config" ]; then
-		cp -r "$BACKUP_DISK2/Volatile/.mozilla" $HOME_DIR
-	  fi
-  fi
-  if [ -d ".mozilla" ]; then echo ".mozilla exists, skip..."; else
-	  if [ -d "$BACKUP_DISK2/Volatile/.mozilla" ]; then
-		cp -r "$BACKUP_DISK2/Volatile/.mozilla" $HOME_DIR
-	  fi
-  fi
-  #if [ -d "$BACKUP_STICK1" ]; then
-  #  _rsync ${rsync_arguments_restore} ${BACKUP_STICK1}/B $HOME_DIR
-  #fi
-  # create symbolic links for .local/bin
-  #post_restore_script
-}
-
+# Backup Nova
 backup_nova () {
-  printf "\nnova:\n"
-  if [ ! -d "$BACKUP_MTP1/Internal shared storage" ]; then
-    printf "\nmounting MTP...\n"
-    mkdir -p $BACKUP_MTP1
-    jmtpfs $BACKUP_MTP1
-  fi
-  if [ -d "$BACKUP_MTP1/Internal shared storage" ]; then
-    if [ -d "$HOME_DIR/Documents/nova" ]; then
-      _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/Pictures" ${HOME_DIR}/Documents/nova
-      _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/Screenshots" ${HOME_DIR}/Documents/nova
-      _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/Movies" ${HOME_DIR}/Documents/nova
-      _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/note" ${HOME_DIR}/Documents/nova
+    printf "\nnova:\n"
+    if [ ! -d "$BACKUP_MTP1/Internal shared storage" ]; then
+        printf "\nMounting MTP...\n"
+        mkdir -p "$BACKUP_MTP1"
+        jmtpfs "$BACKUP_MTP1"
     fi
-  fi
-  umount $BACKUP_MTP1
+
+    if [ -d "$BACKUP_MTP1/Internal shared storage" ]; then
+        if [ -d "$HOME_DIR/Documents/nova" ]; then
+            _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/Pictures" "${HOME_DIR}/Documents/nova"
+            _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/Screenshots" "${HOME_DIR}/Documents/nova"
+            _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/Movies" "${HOME_DIR}/Documents/nova"
+            _rsync ${rsync_arguments_media} "$BACKUP_MTP1/Internal shared storage/note" "${HOME_DIR}/Documents/nova"
+        fi
+    fi
+    umount "$BACKUP_MTP1"
 }
 
+# Restore home directory
+restore_home () {
+    printf "\nrestore:\n"
+
+    # Restore Brave Browser config if not present
+    if [ ! -d ".config/BraveSoftware/Brave-Browser" ] && [ -d "$BACKUP_DISK2/Volatile/.config" ]; then
+        cp -r "$BACKUP_DISK2/Volatile/.mozilla" "$HOME_DIR"
+    else
+        echo ".mozilla exists, skip..."
+    fi
+
+    # Restore .mozilla if not present
+    if [ ! -d ".mozilla" ] && [ -d "$BACKUP_DISK2/Volatile/.mozilla" ]; then
+        cp -r "$BACKUP_DISK2/Volatile/.mozilla" "$HOME_DIR"
+    else
+        echo ".mozilla exists, skip..."
+    fi
+
+    # Uncomment below to enable rsync restoration from BACKUP_STICK1
+    # if [ -d "$BACKUP_STICK1" ]; then
+    #     _rsync ${rsync_arguments_restore} "${BACKUP_STICK1}/B" "$HOME_DIR"
+    # fi
+
+    # Placeholder for post-restore script
+    # post_restore_script
+}
+
+# =========================
+# Utility Functions
+# =========================
+
+# Create rsync filter file based on directory contents
 createfilterfile() {
-  rm /tmp/rsyncfilter
+    local filterbase="$1"
+    local sourcedir="$2"
 
-  filterbase="$1"
+    rm -f /tmp/rsyncfilter
+    echo "+ ${filterbase}/" >> /tmp/rsyncfilter
 
-  echo "+ $filterbase/" >> /tmp/rsyncfilter
+    for filename in "$sourcedir"/*; do
+        local filtercontent="${filename%.*}"
+        filtercontent="${filtercontent##*/}"
+        echo "+ ${filterbase}/${filtercontent}/" >> /tmp/rsyncfilter
+        echo "+ ${filterbase}/${filtercontent}/**" >> /tmp/rsyncfilter
+    done
 
-  for filename in "$2"/*; do
-	  filtercontent="${filename%.*}" && filtercontent="${filtercontent##*/}"
-          echo "+ $filterbase/$filtercontent/" >> /tmp/rsyncfilter
-          echo "+ $filterbase/$filtercontent/**" >> /tmp/rsyncfilter
-  done
-  echo "- *" >> /tmp/rsyncfilter
+    echo "- *" >> /tmp/rsyncfilter
 }
 
+# Backup projects directory
 backup_projects () {
-  printf "\nprojects:\n"
+    printf "\nprojects:\n"
+    local relpath="${currentdir:-Projects}"
 
-  [[ -v currentdir ]] && relpath="$currentdir" || relpath='Projects'
+    # Specific workflow for Osteopathy projects
+    if [[ $currentdir == Projects/Osteopathie/Paracelsus/Skripte ]]; then
+        if [[ ! -d $BACKUP_MTP1/Internal\ shared\ storage ]]; then
+            printf "\nMounting MTP...\n"
+            mkdir -p "$BACKUP_MTP1"
+            jmtpfs "$BACKUP_MTP1"
+        fi
 
-  # Osteopathy specific workflows for eboook reader
-  if [[ $currentdir = Projects/Osteopathie/Paracelsus/Skripte ]]; then
+        if [[ -d $BACKUP_MTP1/Internal\ shared\ storage ]]; then
+            mkdir -p "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
 
-    # mount device if neccessary
-    if [[ ! -d $BACKUP_MTP1/"Internal shared storage" ]]; then
-      printf "\nmounting MTP...\n"
-      jmtpfs "$BACKUP_MTP1"
+            local more_arguments="--exclude '*.png'"
+            _rsync ${rsync_arguments_projects} ${more_arguments} "$HOME_DIR/$currentdir/" "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
+
+            mkdir -p "$HOME_DIR/$currentdir/note"
+            createfilterfile "note" "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
+            _rsync ${rsync_arguments_projects} --filter="merge /tmp/rsyncfilter" "$BACKUP_MTP1/Internal shared storage/note" "$HOME_DIR/${currentdir}"
+            mv "$HOME_DIR/${currentdir}/note/"* . && rm -r "$HOME_DIR/${currentdir}/note/"
+        fi
     fi
 
-    if [[ -d $BACKUP_MTP1/"Internal shared storage" ]]; then
-      [[ ! -d "$BACKUP_MTP1/Internal shared storage/Books/$currentdir" ]] &&
-        mkdir -p "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
-
-      more_arguments="--exclude '*.png'"
-
-      # local -> remote
-      _rsync ${rsync_arguments_projects} ${more_arguments} "$HOME_DIR/$currentdir/" "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
-
-      # remote -> local
-      [[ ! -d "$HOME_DIR/$currentdir/note" ]] &&
-        mkdir -p "$HOME_DIR/$currentdir/note"
-
-      createfilterfile "note" "$BACKUP_MTP1/Internal shared storage/Books/$currentdir"
-      _rsync ${rsync_arguments_projects} --filter="merge /tmp/rsyncfilter" "$BACKUP_MTP1/Internal shared storage/note" "$HOME_DIR/${currentdir}"
-      mv "$HOME_DIR/${currentdir}/note/"* . && rm -r "$HOME_DIR/${currentdir}/note/"
+    # General project backup
+    if [ -d "$BACKUP_DATA" ] && [ -d "$HOME_DIR/$relpath" ]; then
+        local more_arguments=""
+        if [[ $(hostnamectl | grep 'Machine ID:' | awk '{print $NF}') == ff6915e5a88fcbb8152613cb61caf5ba ]]; then
+            more_arguments="--max-size=100M"
+        fi
+        _rsync ${rsync_arguments_projects} ${more_arguments} "${BACKUP_DATA}/${relpath}/" "${HOME_DIR}/${relpath}"
+        _rsync ${rsync_arguments_projects} "${HOME_DIR}/${relpath}/" "${BACKUP_DATA}/${relpath}"
     fi
-  fi
-
-  if [ -d "$BACKUP_DATA" ]; then
-    if [ -d "$HOME_DIR/$relpath" ]; then
-      more_arguments=""
-
-      # limit file size for specific machine
-      [[ $(hostnamectl | grep 'Machine ID:' | awk '{print $NF}') = ff6915e5a88fcbb8152613cb61caf5ba ]] &&
-        more_arguments="$more_arguments --max-size=100M "
-
-      _rsync ${rsync_arguments_projects} ${more_arguments} "${BACKUP_DATA}/${relpath}/" "${HOME_DIR}/${relpath}"
-      _rsync ${rsync_arguments_projects}                   "${HOME_DIR}/${relpath}/" "${BACKUP_DATA}/${relpath}"
-    fi
-  fi
-
 }
+
+# =========================
+# Main Execution
+# =========================
 
 if [ -v restore ]; then
-	[[ -n $gpg ]]  && restore_gpg_keys
-	[[ -n $home ]] && restore_home
+    [[ -n $gpg ]] && restore_gpg_keys
+    [[ -n $home ]] && restore_home
 else
-	[[ -n $all ]] || [[ -n $home ]]   && backup_home
-	[[ -n $all ]] || [[ -n $docs ]]   && backup_documents
-	[[ -n $all ]] || [[ -n $stick ]]  && stick_to_stick
-	[[ -n $all ]] || [[ -n $gpg ]]    && backup_gpg_keys
-	[[ -n $all ]] || [[ -n $videos ]] && backup_movies
-	[[ -n $all ]] || [[ -n $projects ]] && backup_projects
-	[[ -n $all ]] || [[ -n $music ]]  && backup_music
-	[[ -n $all ]] || [[ -n $books ]]  && backup_books
-	[[ -n $all ]] || [[ -n $nova ]]   && backup_nova
-
+    [[ -n $all || -n $home ]] && backup_home
+    [[ -n $all || -n $docs ]] && backup_documents
+    [[ -n $all || -n $stick ]] && stick_to_stick
+    [[ -n $all || -n $gpg ]] && backup_gpg_keys
+    [[ -n $all || -n $videos ]] && backup_movies
+    [[ -n $all || -n $projects ]] && backup_projects
+    [[ -n $all || -n $music ]] && backup_music
+    [[ -n $all || -n $books ]] && backup_books
+    [[ -n $all || -n $nova ]] && backup_nova
 fi
