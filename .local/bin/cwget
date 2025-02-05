@@ -10,6 +10,12 @@
 # - autocompletes with .mp4 if no suffix is given
 # - also accepts curl calls
 
+# Configuration
+CONFIG_DIR="$HOME/.config/cwget"
+ACCESSOIORS_FILE="$HOME/.local/bin/accessoirs/yt-accs"
+DOWNLOAD_DIR="${XDG_VIDEOS_DIR:-$HOME/Videos}"
+TERMINAL="${TERMINAL:-xterm}"
+
 # if not executed from terminal ask for filename via dmenu
 if [[ $TERM = linux ]]; then
 	wm_name=$(xprop -id "$(xdotool getwindowfocus)" WM_NAME | awk -F '"' '{print $2}' | awk -F ' - ' '{print $NF}')
@@ -28,16 +34,8 @@ fi
 
 set -e
 
-exittrap() {
-	notify-send -t 120000 "cwget exited"
-}
-trap exittrap EXIT
-
 source "$HOME/.config/shell/rc.d/00_colors"
-accessoir_file=$HOME/.local/bin/accessoirs/yt-accs
-[[ -f $accessoir_file ]] &&
-	source "$accessoir_file" ||
-	exit 1
+source "$ACCESSOIORS_FILE" || exit 1
 
 case $1 in
 	--eval) iseval=1 && shift;;
@@ -47,7 +45,7 @@ case $1 in
 	--download-list) dllist=1 && shift;;
 esac
 
-[[ -n $iseval ]] && cd ${XDG_VIDEOS_DIR:-$HOME/Videos} || cd $(dirname -- "$1")
+[[ -n $iseval ]] && cd "$DOWNLOAD_DIR" || cd $(dirname -- "$1")
 
 colorize () {
 	printf "${BI}$1${NC}"
@@ -70,55 +68,77 @@ overwrite () {
 	esac
 }
 
-# get current clipboard content as downlaod source
+# Define a unified error handling function
+error_exit() {
+	local message="$1"
+	notify-send -u critical "cwget error" "$message"
+	echo "$message" >&2
+	exit 1
+}
+
+# Define a new function to consolidate URL detection
+detect_download_method() {
+	local url="$1"
+	if [[ "$url" == *".youtu"* || "$url" == *"/youtu"* ]]; then
+		yt=1
+		ytbraw=1
+	elif [[ "$url" == curl* ]]; then
+		crl=1
+	elif [[ "$url" == *".m3u8"* ]]; then
+		yt=1
+		unset wgt
+	elif [[ "$url" == http* ]]; then
+		wgt=1
+	else
+		echo "Clipboard content has no valid download pattern. Exiting."
+		error_exit "$message"
+	fi
+}
+
+# get current clipboard content as download source
 [[ -z $get_url ]] && get_url=$(xclip -selection clipboard -o -print0)
 
 # determine which tool to use
-case $get_url in
-	*".youtu"*) yt=1 && ytbraw=1 ;;
-	*"/youtu"*) yt=1 && ytbraw=1 ;;
-	"curl "*) crl=1 ;;
- 	*".m3u8"*) yt=1 && unset wgt ;;&
-	"http"* ) wgt=1 ;;
-	*       )
-		echo "Clipboard content has no valid download pattern. Exiting."
-		exit 0
-	;;
-esac
+detect_download_method "$get_url"
 
 # remove list parameter from url to prevent downloading whole playlist
 if [[ -n $ytbraw ]]; then
 	get_url=${get_url%%?list*}
 fi
 
-# try to guess filename from 2nd last entry of clipboard history using greenclip
-#cd - &> /dev/null
-if [[ -z "$1" ]]
-then
-	[[ -z "$ytbraw" ]] && command -v greenclip &> /dev/null &&
-    		filename="$(greenclip print | sed -n 2p)" &&
-		[[ $filename =~ ^[a-zA-Z0-9_.[:space:]-]+$ ]] || filename=""
-else
-	filename="$1"
-fi
-
-# Check if file name is part of a series and increment episode number accordingly
-files=( "$filename"* )
-#regx='(.*) S([0-9]{2})E([0-9]{2})'
-regx='/^([\w\s]+) S(\d{2})E(\d{2})(\.[a-z]+)?$/i'
-if [[ $(printf "%s\n" "${files[@]}" | wc -l) -gt 0 ]]; then
-	if [[ -f ${files[-1]} ]] && [[ "${files[-1]}" =~ $regx ]]; then
-		title="${BASH_REMATCH[1]}"
-		season="${BASH_REMATCH[2]}"
-		episode=$((${BASH_REMATCH[3]}+1))
-		episode=$(printf "%02d\n" $episode)
-		filename="$title S${season}E${episode}"
+# Define a new function for filename generation
+generate_filename() {
+	local input="$1"
+	if [[ -z "$input" ]]; then
+		if [[ -z "$ytbraw" ]] && command -v greenclip &> /dev/null; then
+			filename="$(greenclip print | sed -n 2p)"
+			[[ $filename =~ ^[a-zA-Z0-9_.[:space:]-]+$ ]] || filename=""
+		fi
+	else
+		filename="$input"
 	fi
-fi
 
-# if filename not empty & without file extension, fill in mp4 extension
-[ -n "${filename}" ] && [[ $filename != *.* ]] &&
-	filename="$filename.mp4"
+	# Check if file name is part of a series and increment episode number accordingly
+	local files=( "$filename"* )
+	regx='^([\w\s]+) S(\d{2})E(\d{2})(\.[a-z]+)?$'
+	if [[ ${#files[@]} -gt 0 ]]; then
+		if [[ -f "${files[-1]}" ]] && [[ "${files[-1]}" =~ $regx ]]; then
+			local title="${BASH_REMATCH[1]}"
+			local season="${BASH_REMATCH[2]}"
+			local episode=$((${BASH_REMATCH[3]} + 1))
+			episode=$(printf "%02d" "$episode")
+			filename="$title S${season}E${episode}"
+		fi
+	fi
+
+	# If filename not empty & without file extension, add mp4 extension
+	if [[ -n "$filename" ]] && [[ "$filename" != *.* ]]; then
+		filename="$filename.mp4"
+	fi
+}
+
+# Generate filename
+generate_filename "$1"
 
 # if file exists ask to continue or to overwrite file
 [[ -f "$filename" ]] && overwrite "$filename"
@@ -135,25 +155,41 @@ fi
 
 yt=1 # seems as if this is the new standard now...
 
+# Define a new function for unified download handling
+download() {
+	local method="$1"
+	local url="$2"
+	if [[ "$method" == "yt-dlp" ]]; then
+		_yt_dlp "$url"
+		notify-send -t 5000 "cwget" "Download completed: $filename"
+	elif [[ "$method" == "wget" ]]; then
+		while true; do
+			[[ -n $filename ]] && [[ -f $filename ]] && wget_parms="-c"
+			[[ -z $filename ]] && {
+				filename=$(printf '%b' "$(echo "$url" | sed 's/%/\\x/g')")
+				filename=$(basename "$filename")
+			}
+			[[ ! $filename =~ \.[a-zA-Z0-9]+$ ]] && {
+				echo "$filename is not a valid filename"
+				error_exit "$message"
+			}
+			eval "wget -T 5 $wget_parms \"$url\" -O \"$filename\" && break;"
+		done
+		touch -m -a "$filename"
+		notify-send -t 5000 "cwget" "Download completed: $filename"
+	else
+		echo "Unsupported download method: $method"
+		error_exit "$message"
+	fi
+}
+
 # if m3u8 or youtube link, use yt-dlp
 if [[ -n $yt ]]; then
-	#$TERMINAL -e bash -c "sleep 8; mpv '$PWD/$filename.part'; $SHELL" &
-	_yt_dlp "$get_url"
+	download "yt-dlp" "$get_url"
 	exit 0
 fi
 
 # use wget
-if [[ -n $wgt ]] && [[ -z $yt ]] ; then
-	#$TERMINAL -e bash -c "sleep 5; mpv '$PWD/$filename'; $SHELL" &
-	while true ; do
-		[[ -n $filename ]] && [[ -f $filename ]] &&
-			wget_parms="-c"
-		[[ -z $filename ]] &&
-			filename=$(printf '%b' "$(echo "$get_url" | sed 's/%/\\x/g')") &&
-			filename=$(basename "$filename")
-		[[ ! $filename =~ \.[a-zA-Z0-9]+$ ]] &&
-			echo "$filename is not a valid filename" && exit 1
-		eval "wget -T 5 $wget_parms $get_url -O '$filename' && break;"
-	done
-	touch -m -a "$filename"
+if [[ -n $wgt ]] && [[ -z $yt ]]; then
+	download "wget" "$get_url"
 fi

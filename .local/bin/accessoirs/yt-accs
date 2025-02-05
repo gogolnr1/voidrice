@@ -19,95 +19,112 @@ set_yt_resolution() {
 }
 
 embedtranscription() {
-	[[ -z $@ ]] && exit 1
+	local url="$1"
+	local filename="$2"
+	[[ -z $filename || ! -f $filename ]] && { echo "Error: Invalid filename"; return 1; }
 
-	video_id=$(echo "$@" | sed -n 's/.*\[\([^]]*\)\].*/\1/p')
-	[[ -n $video_id ]] &&
-		url="https://www.youtube.com/watch?v=$video_id" ||
- 		url="$@"
-	echo "$url"
+	local temp_dir=$(mktemp -d)
+	trap 'rm -rf "$temp_dir"' EXIT
 
-	[[ -z $filename ]] &&
-		echo "no filename given. exiting..." &&
-		exit 1
+	echo "Debug: Getting transcripts for $url"
+	yt-dlp --skip-download \
+		   --write-auto-subs --write-subs \
+		   --sub-langs "en,de" \
+		   --sub-format "vtt" \
+		   --convert-subs "srt" \
+		   --output "${temp_dir}/subs.%(ext)s" \
+		   "$url"
 
-	#file_ext="${filename##*.}"
-	# file_ext auf länge = 3 prüfen
-	##[[ "$file_ext" == "$filename" ]] &&
-	file_ext="mkv"
+	# Create metadata file
+	local metadata_file="${temp_dir}/metadata.txt"
+	echo ";FFMETADATA1" > "$metadata_file"
 
-	cmd=("yt-dlp" "--skip-download" \
-		"--write-subs" "--write-auto-subs" \
-		"--sub-lang" "en,de" "--sub-format" "ttml" \
-		"--convert-subs" "srt" "\"$url\"" \
-		"-o" "\"transcript.%(ext)s\"")
-	eval $(printf "%s " "${cmd[@]}")
+	local found_transcripts=0
 	for lang in en de; do
-		# Check if the file exists to avoid errors
-		if [[ -f "transcript.$lang.srt" ]]; then
-			local srt_file="transcript.$lang.srt"
-			local output_file="output.$lang.txt"
-
-			# Clean the subtitle file and remove unnecessary lines
-			sed -i '' \
-			-e '/^[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9] --> [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]$/d' \
-			-e '/^[[:digit:]]\{1,4\}$/d' \
-			-e 's/<[^>]*>//g' \
-			-e '/^[[:space:]]*$/d' \
-			"$srt_file"
-
-			# Concatenate the cleaned subtitles into a single line
-			tr '\n' ' ' < "$srt_file" > "$output_file"
-			transcript_content=$(tr '\n' ' ' < "$srt_file")
-
-			# Build the metadata parameters
-			transcript_metadata+=("-metadata" "Transcript$lang=\"$transcript_content\"")
+		local transcript_file="${temp_dir}/subs.${lang}.srt"
+		if [[ -f $transcript_file ]]; then
+			echo "Debug: Found transcript for $lang: $transcript_file"
+			local transcript=$(sed -E '/^[0-9]+$|^[0-9:.-> ]+$/d' "$transcript_file" | \
+							 sed 's/<[^>]*>//g' | \
+							 tr '\n' ' ' | \
+							 sed 's/\s\+/ /g' | \
+							 sed 's/^ *//;s/ *$//' | \
+							 sed 's/[=;#\[\]]/\\&/g')  # Escape special characters
+			[[ -n $transcript ]] && {
+				echo "Transcript${lang}=${transcript}" >> "$metadata_file"
+				found_transcripts=1
+			}
+		else
+			echo "Debug: No transcript file found for $lang"
 		fi
 	done
 
-	# Construct the ffmpeg command using an array
-	[[ -f $filename.jpg ]] && [[ -n $transcript_metadata ]] && cmd=("ffmpeg" \
-		"-i" "\"$filename.$file_ext\"" "-i" "\"$filename.jpg\"" \
-		"-map" "0" "-map" "1" "-c" "copy" \
-		"${transcript_metadata[@]}" \
-		"-disposition:v:0" "attached_pic"
-		"\"temp_$filename.$file_ext\"") &&
-	# Join the array elements into a single string and execute the command using eval
-	# then overwrite original file and remove temporary files
-		eval $(printf "%s " "${cmd[@]}")
-
-	# TODO make an exit trap out of this
-	mv "temp_$filename.$file_ext" "$filename.$file_ext"
-	rm "transcript."* "output."*
-	# "$filename".jpg
+	if [[ $found_transcripts -eq 1 ]]; then
+		echo "Debug: Embedding transcripts using metadata file"
+		# Create safe temporary filename
+		local temp_output="${temp_dir}/output.mkv"
+		ffmpeg -i "$filename" -i "$metadata_file" -map_metadata 1 \
+			   -c copy "$temp_output" && \
+		mv "$temp_output" "$filename" && \
+		echo "Debug: Successfully embedded transcripts"
+	else
+		echo "Debug: No transcripts found to embed"
+	fi
 }
 
 _yt_dlp() {
-	[[ -n $islive ]] &&
-		collector+=('--downloader' 'ffmpeg' '--hls-use-mpegts')
+	# Handle resolution selection first if needed
+	[[ -n "$ytbraw" ]] && set_yt_resolution
+
+	# Get all needed info in a single yt-dlp call
 	if [[ -z $filename ]]; then
-		# exctract filename, upload_date and channel name for a more comprehensive filename
-		while IFS= read -r fcu; do
-			fcu+=("$fcu")
-		done <<< $(yt-dlp --print filename --print channel --print upload_date "$get_url")
-		filename="${fcu[2]} – ${fcu[3]} - ${fcu[1]%.*}"
+		local json_info=$(yt-dlp -J --no-download "$get_url")
+		local channel=$(echo "$json_info" | jq -r '.channel')
+		local upload_date=$(echo "$json_info" | jq -r '.upload_date')
+		local title=$(echo "$json_info" | jq -r '.title')
+		filename="${upload_date} – ${channel} - ${title}"
 	fi
+
+	# Build collector array
+	[[ -n $islive ]] && collector+=('--downloader' 'ffmpeg' '--hls-use-mpegts')
 	collector+=("-o" "\"$filename\"")
 	collector+=('--sub-lang' 'en,de' '--embed-subs' '--write-auto-subs')
+
+	# Handle download
 	if [[ ! -f $filename.mkv ]]; then
 		[[ -n "$ytbraw" ]] && [[ ! $(basename $PWD) = Youtube ]] && \
 			mkdir -pv Youtube && cd Youtube
-		[[ -n "$ytbraw" ]] && set_yt_resolution
-		#"--replace-in-metadata" "'Movie name'" "'%(Movie name)s'" "'$filename'"
-		cmd+=("yt-dlp" "-i" "\"$@\""
-			"--embed-metadata" "--write-thumbnail" "--embed-chapters"
-			"--merge-output-format" "mkv"
-			"--exec" "'touch -m -a {}'"
-			"$resolution"
+
+		cmd+=("yt-dlp" "-i" "\"$@\"" \
+			"--embed-metadata" "--write-thumbnail" "--embed-chapters" \
+			"--merge-output-format" "mkv" \
+			"--exec" "'touch -m -a {}'" \
+			"$resolution" \
 			"${collector[@]}")
+		
 		eval $(printf "%s " "${cmd[@]}")
-		[[ -f $filename.webp ]] &&
+		
+		[[ -f $filename.webp ]] && \
 			ffmpeg -i "$filename.webp" "$filename.jpg" && rm "$filename.webp"
 	fi
-	#[[ -n ytbraw ]] && embedtranscription "$@"
+
+	[[ -n $ytbraw ]] && embedtranscription "$@" "$filename.mkv"
 }
+
+printtranscript() {
+	local file="$1"
+	local lang="${2:-en}"  # defaults to English if not specified
+	
+	ffprobe -v quiet -show_entries format_tags=Transcript${lang} \
+			-of default=noprint_wrappers=1:nokey=1 \
+			"$file"
+}
+
+listmetadata() {
+	local file="$1"
+	ffprobe -v quiet -show_entries format_tags -of default=noprint_wrappers=1 "$file"
+}
+
+# Usage examples:
+# printtranscript video.mkv     # prints English transcript
+# printtranscript video.mkv de  # prints German transcript
