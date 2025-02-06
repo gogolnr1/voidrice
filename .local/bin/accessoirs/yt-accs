@@ -27,48 +27,45 @@ embedtranscription() {
 	trap 'rm -rf "$temp_dir"' EXIT
 
 	echo "Debug: Getting transcripts for $url"
-	yt-dlp --skip-download \
-		   --write-auto-subs --write-subs \
-		   --sub-langs "en,de" \
-		   --sub-format "vtt" \
-		   --convert-subs "srt" \
-		   --output "${temp_dir}/subs.%(ext)s" \
-		   "$url"
-
-	# Create metadata file
 	local metadata_file="${temp_dir}/metadata.txt"
 	echo ";FFMETADATA1" > "$metadata_file"
-
 	local found_transcripts=0
+
 	for lang in en de; do
+		yt-dlp --skip-download \
+			   --write-subs --write-auto-subs \
+			   --sub-lang "$lang" \
+			   --sub-format "ttml" \
+			   --convert-subs "srt" \
+			   --output "${temp_dir}/subs.%(ext)s" \
+			   "$url" 2>/dev/null
+
 		local transcript_file="${temp_dir}/subs.${lang}.srt"
 		if [[ -f $transcript_file ]]; then
-			echo "Debug: Found transcript for $lang: $transcript_file"
-			local transcript=$(sed -E '/^[0-9]+$|^[0-9:.-> ]+$/d' "$transcript_file" | \
-							 sed 's/<[^>]*>//g' | \
+			echo "Debug: Found transcript for $lang"
+			local transcript=$(sed -i -e '/^[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9] --> [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]$/d' \
+									-e '/^[[:digit:]]\{1,4\}$/d' \
+									-e 's/<[^>]*>//g' \
+									"$transcript_file" && \
+							 sed -e '/^[[:space:]]*$/d' "$transcript_file" | \
 							 tr '\n' ' ' | \
-							 sed 's/\s\+/ /g' | \
-							 sed 's/^ *//;s/ *$//' | \
-							 sed 's/[=;#\[\]]/\\&/g')  # Escape special characters
+							 sed -e 's/\s\+/ /g' \
+								 -e 's/^ *//;s/ *$//' \
+								 -e 's/[=;#\[\]]/\\&/g')
+
 			[[ -n $transcript ]] && {
 				echo "Transcript${lang}=${transcript}" >> "$metadata_file"
 				found_transcripts=1
 			}
-		else
-			echo "Debug: No transcript file found for $lang"
 		fi
 	done
 
 	if [[ $found_transcripts -eq 1 ]]; then
-		echo "Debug: Embedding transcripts using metadata file"
-		# Create safe temporary filename
 		local temp_output="${temp_dir}/output.mkv"
 		ffmpeg -i "$filename" -i "$metadata_file" -map_metadata 1 \
 			   -c copy "$temp_output" && \
 		mv "$temp_output" "$filename" && \
 		echo "Debug: Successfully embedded transcripts"
-	else
-		echo "Debug: No transcripts found to embed"
 	fi
 }
 
@@ -76,39 +73,114 @@ _yt_dlp() {
 	# Handle resolution selection first if needed
 	[[ -n "$ytbraw" ]] && set_yt_resolution
 
-	# Get all needed info in a single yt-dlp call
-	if [[ -z $filename ]]; then
-		local json_info=$(yt-dlp -J --no-download "$get_url")
-		local channel=$(echo "$json_info" | jq -r '.channel')
-		local upload_date=$(echo "$json_info" | jq -r '.upload_date')
-		local title=$(echo "$json_info" | jq -r '.title')
-		filename="${upload_date} – ${channel} - ${title}"
-	fi
-
-	# Build collector array
-	[[ -n $islive ]] && collector+=('--downloader' 'ffmpeg' '--hls-use-mpegts')
-	collector+=("-o" "\"$filename\"")
-	collector+=('--sub-lang' 'en,de' '--embed-subs' '--write-auto-subs')
-
-	# Handle download
+	# Single yt-dlp call for metadata and download
 	if [[ ! -f $filename.mkv ]]; then
 		[[ -n "$ytbraw" ]] && [[ ! $(basename $PWD) = Youtube ]] && \
 			mkdir -pv Youtube && cd Youtube
 
+		# Get the actual filename from yt-dlp if not set
+		if [[ -z $filename ]]; then
+			# Get filename from yt-dlp template
+			filename=$(yt-dlp --print filename \
+							 --restrict-filenames \
+							 -o '%(upload_date)s – %(channel)s - %(title).200s' \
+							 "$get_url" | \
+					  sed -e 's/：/:/g' \
+						  -e 's/[\\/*?"<>|]/-/g' \
+						  -e 's/\s\+/ /g' \
+						  -e 's/[[:space:]]*$//g')
+		fi
+
+		# Store the base filename without extension
+		local base_filename="$filename"
+
 		cmd+=("yt-dlp" "-i" "\"$@\"" \
 			"--embed-metadata" "--write-thumbnail" "--embed-chapters" \
+			"--sub-langs" "en,de" \
+			"--write-subs" "--write-auto-subs" \
+			"--sub-format" "ttml" \
+			"--convert-subs" "srt" \
 			"--merge-output-format" "mkv" \
 			"--exec" "'touch -m -a {}'" \
 			"$resolution" \
-			"${collector[@]}")
+			"--restrict-filenames" \
+			"-o" "\"${base_filename}.%(ext)s\"")
 		
 		eval $(printf "%s " "${cmd[@]}")
 		
-		[[ -f $filename.webp ]] && \
-			ffmpeg -i "$filename.webp" "$filename.jpg" && rm "$filename.webp"
-	fi
+		# Process thumbnail and transcripts in a single ffmpeg call
+		if [[ -n $ytbraw ]]; then
+			local temp_dir=$(mktemp -d)
+			trap 'rm -rf "$temp_dir"' EXIT
+			local metadata_file="${temp_dir}/metadata.txt"
+			echo ";FFMETADATA1" > "$metadata_file"
+			local found_transcripts=0
 
-	[[ -n $ytbraw ]] && embedtranscription "$@" "$filename.mkv"
+			# Convert webp to jpg if exists
+			[[ -f "${base_filename}.webp" ]] && {
+				ffmpeg -i "${base_filename}.webp" \
+					   -frames:v 1 \
+					   -update 1 \
+					   "${base_filename}.jpg" && \
+				rm "${base_filename}.webp"
+			}
+
+			# Process transcripts
+			for lang in en de; do
+				local srt_file="${base_filename}.${lang}.srt"
+				echo "Debug: Looking for transcript file: $srt_file"
+				if [[ -f $srt_file ]]; then
+					echo "Debug: Processing transcript for $lang"
+					local transcript=$(sed -i -e '/^[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9] --> [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]$/d' \
+										-e '/^[[:digit:]]\{1,4\}$/d' \
+										-e 's/<[^>]*>//g' \
+										"$srt_file" && \
+								 sed -e '/^[[:space:]]*$/d' "$srt_file" | \
+								 tr '\n' ' ' | \
+								 sed -e 's/\s\+/ /g' \
+									 -e 's/^ *//;s/ *$//' \
+									 -e 's/[=;#\[\]]/\\&/g')
+
+					[[ -n $transcript ]] && {
+						echo "Debug: Adding $lang transcript to metadata"
+						echo "Transcript${lang}=${transcript}" >> "$metadata_file"
+						found_transcripts=1
+						rm "$srt_file"
+					}
+				else
+					echo "Debug: No transcript file found for $lang"
+				fi
+			done
+
+			# Single ffmpeg call for both thumbnail and transcripts
+			if [[ $found_transcripts -eq 1 || -f "${base_filename}.jpg" ]]; then
+				echo "Debug: Embedding transcripts and thumbnail"
+				local temp_output="${temp_dir}/output.mkv"
+				if [[ -f "${base_filename}.jpg" ]]; then
+					ffmpeg -i "${base_filename}.mkv" \
+						   -i "${base_filename}.jpg" \
+						   -i "$metadata_file" \
+						   -map 0 -map 1 \
+						   -map_metadata 2 \
+						   -c copy \
+						   -disposition:v:1 attached_pic \
+						   "$temp_output" && \
+					mv "$temp_output" "${base_filename}.mkv" && \
+					rm "${base_filename}.jpg" && \
+					echo "Debug: Successfully embedded transcripts and thumbnail"
+				else
+					ffmpeg -i "${base_filename}.mkv" \
+						   -i "$metadata_file" \
+						   -map 0 \
+						   -map_metadata 1 \
+						   -c copy \
+						   "$temp_output" && \
+					mv "$temp_output" "${base_filename}.mkv" && \
+					echo "Debug: Successfully embedded transcripts"
+				fi
+			fi
+		fi
+	fi
 }
 
 printtranscript() {
