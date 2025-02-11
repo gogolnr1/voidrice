@@ -1,0 +1,81 @@
+#!/bin/bash
+
+if [[ $1 == -i ]]; then
+  # Check if running as root
+  if [ "$EUID" -eq 0 ]; then 
+      echo "Please run without sudo"
+      exit 1
+  fi
+
+  # Install required packages
+  echo "Installing required packages..."
+  yay -S --noconfirm auto-cpufreq xdotool wmctrl
+
+  # Enable auto-cpufreq
+  sudo systemctl enable --now auto-cpufreq
+
+  # Create systemd user directory if it doesn't exist
+  mkdir -p ~/.config/systemd/user/
+
+  # Create auto-suspend slice config
+  echo "Creating auto-suspend slice..."
+  cat > ~/.config/systemd/user/auto-suspend.slice << 'EOF'
+[Slice]
+CPUQuota=5%
+IOWeight=10
+EOF
+
+  echo "Installation complete!"
+  echo "You can monitor the effects using: systemctl --user status auto-suspend.slice"
+  return 0
+fi
+
+# Get the window ID of the focused window
+get_focused_window() {
+    xdotool getwindowfocus
+}
+
+# Restore normal priority
+restore_window() {
+    window_id=$1
+    pid=$(xdotool getwindowpid "$window_id" 2>/dev/null)
+    
+    if [ ! -z "$pid" ]; then
+        # Reset nice value to 0 (normal priority)
+        renice 0 -p "$pid" >/dev/null 2>&1
+        
+        # Kill any existing systemd scope for this process
+        scope_name="proc-${pid}.scope"
+        systemctl --user stop "$scope_name" 2>/dev/null
+    fi
+}
+
+# Move process to low-priority slice
+suspend_window() {
+    window_id=$1
+    pid=$(xdotool getwindowpid "$window_id" 2>/dev/null)
+    
+    if [ ! -z "$pid" ]; then
+        systemd-run --user --slice=auto-suspend.slice -p CPUQuota=5% \
+            --scope -p "Slice=auto-suspend.slice" \
+            choom -n 19 -p "$pid"
+    fi
+}
+
+# Monitor window focus changes
+xprop -root -spy _NET_ACTIVE_WINDOW | while read -r line; do
+    focused_win=$(get_focused_window)
+    
+    # Restore priority to focused window
+    restore_window "$focused_win"
+    
+    # Get all windows
+    windows=$(wmctrl -l | cut -d' ' -f1)
+    
+    # Move unfocused windows to low-priority slice
+    for window in $windows; do
+        if [ "$window" != "$focused_win" ]; then
+            suspend_window "$window"
+        fi
+    done
+done
