@@ -1,0 +1,19 @@
+#!/bin/bash
+# TODO: UNCLEAN!
+
+source `which comma`
+
+[[ -n $1 ]] && [[ $1 = --list ]] && list=1 && shift
+[[ -n $1 ]] && [[ $1 = --like ]] && like=1 && shift
+[[ -n $1 ]] && [[ $1 =~ ^[a-zA-Z0-9_-]{11}$ ]] && $VIDEO_ID=$1 && shift
+
+# list liked videos
+[[ -n $list ]] &&
+curl -H "Authorization: Bearer $YOUTUBE_TOKEN" \
+     "https://www.googleapis.com/youtube/v3/videos?part=snippet&myRating=like&maxResults=50"
+
+# like a video
+[[ -n $like && -n $VIDEO_ID ]] &&
+curl -X POST -H "Authorization: Bearer $YOUTUBE_TOKEN" \
+     "https://www.googleapis.com/youtube/v3/videos/rate?id=$VIDEO_ID&rating=like"
+
