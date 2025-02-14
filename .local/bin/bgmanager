@@ -27,7 +27,7 @@ EOF
 
   echo "Installation complete!"
   echo "You can monitor the effects using: systemctl --user status auto-suspend.slice"
-  return 0
+  exit 0
 fi
 
 # Get the window ID of the focused window
