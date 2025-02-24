@@ -7,7 +7,7 @@ input_file="$1"
 # Given a file with metadata included,
 # fetch a list with mediainfo and present it to dmenu,
 # extract selected metadata key
-metadata_key=$(mediainfo --Output=JSON "$input_file" | jq -r '.media.track[] | select(.["@type"] == "General") | .extra | to_entries[] | "\(.key):\(.value)"' | grep -E -o "^.{0,200}" - | dmenu -i -l 40 | sed 's/:.*//')
+metadata_key=$(mediainfo --Output=JSON "$input_file" | jq -r '.media.track[] | select(.["@type"] == "General") | .extra | to_entries[] | "\(.key):\(.value)"' | grep -E -o "^.{0,200}" - | dxf "Select metadata key:" | sed 's/:.*//')
 
 # Extract the metadata value using mediainfo,
 # replace line seperator ' / ' with a regular new line '\n'

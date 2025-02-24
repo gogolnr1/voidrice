@@ -2,14 +2,14 @@
 # todo: consider use copyq
 
 if [[ $1 = clear ]] ; then
-	[[ $(printf "No\\nYes" | dmenu -i -p "Clear clipboard history?") = Yes ]] && \
+	[[ $(printf "No\\nYes" | dxf "Clear clipboard history?") = Yes ]] && \
 		pkill greenclip && greenclip clear && greenclip daemon
 
 	exit 0
 fi
 
 # Truncated demenu printout with line numbers
-index=$(greenclip print | grep -E -on "^.{0,200}" - | dmenu -i -l 40 | sed 's/:.*//')
+index=$(greenclip print | grep -E -on "^.{0,200}" - | dxf "Select clipboard entry:" | sed 's/:.*//')
 [[ -z $index ]] && exit 0
 
 # Aquiring full clipboard content of selection

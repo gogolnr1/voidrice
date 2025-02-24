@@ -4,12 +4,56 @@
 # to use without root privs:
 # `sudo usermod -a -G video toto`
 
-bfl=/sys/class/backlight/intel_backlight
-bfl=/sys/class/backlight/amdgpu_bl1
-#bfl=/sys/class/backlight/radeon_bl0
+# Get available backlight classes
+config_dir="$HOME/.local/share/brightness"
+config_file="$config_dir/selected_backlight"
+
+# Function to list and select backlight device
+select_backlight() {
+    # Create config directory if it doesn't exist
+    mkdir -p "$config_dir"
+
+    local devices=()
+    while IFS= read -r device; do
+        devices+=("$(basename "$device")")
+    done < <(find /sys/class/backlight -mindepth 1 -maxdepth 1)
+
+    if [ ${#devices[@]} -eq 0 ]; then
+        echo "No backlight devices found"
+        exit 1
+    elif [ ${#devices[@]} -eq 1 ]; then
+        echo "${devices[0]}" > "$config_file"
+        echo "Using only available backlight: ${devices[0]}"
+    else
+        # Use dxf for selection
+        selected=$(dxf "Select backlight device:" "${devices[@]}")
+        if [ -n "$selected" ]; then
+            echo "$selected" > "$config_file"
+            echo "Selected backlight: $selected"
+        else
+            echo "No backlight device selected"
+            exit 1
+        fi
+    fi
+}
+
+# Check if backlight is already selected or needs to be selected
+if [ ! -f "$config_file" ]; then
+    exn "Creating backlight persistance file"
+    select_backlight
+fi
+
+bfl="/sys/class/backlight/$(cat "$config_file")"
+
+# Verify the selected backlight still exists
+if [ ! -d "$bfl" ]; then
+    echo "Selected backlight no longer exists. Please select again."
+    select_backlight
+    bfl="/sys/class/backlight/$(cat "$config_file")"
+fi
+
 [[ $(stat -L -c "%a" ${bfl}/brightness) -ne 666 ]] &&
     chmod 666 ${bfl}/brightness
-    #sudo chmod 666 ${bfl}/brightness
 
 # Steps for raising/lowering brightness
 STEP=50

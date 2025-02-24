@@ -1,7 +1,44 @@
 #!/bin/sh
-# simple fzf/dmenu wrapper depending on $TERM state
+# simple fzf/dmenu/prompt wrapper depending on environment
 
-if [[ $TERM != linux ]]
-	then shift && fzf $@
-	else dmenu -i -l 30 -p $@
+prompt="$1"
+shift
+
+if command -v fzf >/dev/null && [ -t 1 ]; then
+    if [ $# -gt 0 ]; then
+        # If options provided as arguments
+        for arg in "$@"; do
+            echo "$arg"
+        done | fzf --prompt="$prompt > "
+    else
+        # Read options from stdin as-is
+        fzf --prompt="$prompt > "
+    fi
+elif command -v dmenu >/dev/null; then
+    if [ $# -gt 0 ]; then
+        # If options provided as arguments
+        for arg in "$@"; do
+            echo "$arg"
+        done | dmenu -i -l 30 -p "$prompt"
+    else
+        # Read options from stdin as-is
+        dmenu -i -l 30 -p "$prompt"
+    fi
+else
+    # Normal prompt fallback
+    echo "$prompt" >&2
+    if [ $# -gt 0 ]; then
+        # If options provided as arguments
+        items="$*"
+    else
+        # Read options from stdin
+        items=$(cat)
+    fi
+    PS3="Select option: "
+    select opt in $items; do
+        if [ -n "$opt" ]; then
+            echo "$opt"
+            break
+        fi
+    done
 fi
