@@ -2,7 +2,8 @@
 
 #GITHUB_TOKEN="<YOUR_TOKEN>"
 #GOOGLE_TOKEN="<YOUR_TOKEN>"
-#YOUTUBE_TOKEN="<YOUR_TOKEN>"
+YOUTUBE_TOKEN='AIzaSyCcVvnrAZcICbVKNsoUJIPld5HKAsUcFOU'
+GOOGLE_OAUTH='101599053022-tqn05uaq63n55nhi5i7tm9scfg35kj8s.apps.googleusercontent.com'
 
 if [[ `basename "$0"` = comma ]]; then
 	location=$HOME/.local/bin/,

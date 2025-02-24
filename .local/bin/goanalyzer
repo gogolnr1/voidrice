@@ -1,0 +1,174 @@
+#!/bin/python3
+
+import os
+import re
+from dataclasses import dataclass
+from typing import List, Dict, Set
+import ast
+import json
+from pathlib import Path
+
+@dataclass
+class GoFunction:
+    name: str
+    file_path: str
+    line_number: int
+    signature: str
+    calls: List[str] = None
+    
+@dataclass
+class GoStruct:
+    name: str
+    file_path: str
+    fields: List[str]
+    methods: List[str]
+
+@dataclass
+class GoInterface:
+    name: str
+    file_path: str
+    methods: List[str]
+
+class GoProjectAnalyzer:
+    def __init__(self, project_path: str):
+        self.project_path = Path(project_path)
+        self.go_files = []
+        self.functions = {}
+        self.structs = {}
+        self.interfaces = {}
+        self.output_calls = []
+        self.gocui_views = []
+        self.dependencies = set()
+        
+    def analyze(self):
+        """Main analysis entry point"""
+        self._find_go_files()
+        self._analyze_dependencies()
+        
+        for file_path in self.go_files:
+            self._analyze_file(file_path)
+            
+        return self._generate_report()
+    
+    def _find_go_files(self):
+        """Recursively find all .go files in the project"""
+        for root, _, files in os.walk(self.project_path):
+            for file in files:
+                if file.endswith('.go'):
+                    self.go_files.append(Path(root) / file)
+    
+    def _analyze_dependencies(self):
+        """Parse go.mod file if it exists"""
+        go_mod = self.project_path / 'go.mod'
+        if go_mod.exists():
+            with open(go_mod, 'r') as f:
+                for line in f:
+                    if line.startswith('require'):
+                        self.dependencies.add(line.strip())
+    
+    def _analyze_file(self, file_path: Path):
+        """Analyze a single Go file"""
+        with open(file_path, 'r') as f:
+            content = f.read()
+            
+        # Find struct definitions
+        struct_pattern = r'type\s+(\w+)\s+struct\s*{([^}]+)}'
+        for match in re.finditer(struct_pattern, content):
+            struct_name = match.group(1)
+            fields = [f.strip() for f in match.group(2).split('\n') if f.strip()]
+            self.structs[struct_name] = GoStruct(
+                name=struct_name,
+                file_path=str(file_path),
+                fields=fields,
+                methods=[]
+            )
+        
+        # Find interface definitions
+        interface_pattern = r'type\s+(\w+)\s+interface\s*{([^}]+)}'
+        for match in re.finditer(interface_pattern, content):
+            interface_name = match.group(1)
+            methods = [m.strip() for m in match.group(2).split('\n') if m.strip()]
+            self.interfaces[interface_name] = GoInterface(
+                name=interface_name,
+                file_path=str(file_path),
+                methods=methods
+            )
+        
+        # Find function definitions
+        func_pattern = r'func\s+(?:\([^)]+\)\s+)?(\w+)[^{]+{'
+        for match in re.finditer(func_pattern, content):
+            func_name = match.group(1)
+            self.functions[func_name] = GoFunction(
+                name=func_name,
+                file_path=str(file_path),
+                line_number=content[:match.start()].count('\n') + 1,
+                signature=match.group(0).strip()[:-1]  # Remove trailing {
+            )
+        
+        # Find output operations
+        output_patterns = [
+            r'fmt\.Fprintf\([^)]+\)',
+            r'fmt\.Printf\([^)]+\)',
+            r'fmt\.Println\([^)]+\)',
+            r'log\.[^(]+\([^)]+\)'
+        ]
+        for pattern in output_patterns:
+            for match in re.finditer(pattern, content):
+                self.output_calls.append({
+                    'call': match.group(0),
+                    'file': str(file_path),
+                    'line': content[:match.start()].count('\n') + 1
+                })
+        
+        # Find gocui view definitions
+        view_pattern = r'g\.SetView\(\s*"([^"]+)"'
+        for match in re.finditer(view_pattern, content):
+            self.gocui_views.append({
+                'name': match.group(1),
+                'file': str(file_path),
+                'line': content[:match.start()].count('\n') + 1
+            })
+    
+    def _generate_report(self) -> dict:
+        """Generate a structured report of the analysis"""
+        return {
+            'project_info': {
+                'path': str(self.project_path),
+                'go_files': [str(f) for f in self.go_files],
+                'dependencies': list(self.dependencies)
+            },
+            'code_components': {
+                'structs': {name: vars(struct) for name, struct in self.structs.items()},
+                'interfaces': {name: vars(interface) for name, interface in self.interfaces.items()},
+                'functions': {name: vars(func) for name, func in self.functions.items()}
+            },
+            'ui_components': {
+                'views': self.gocui_views,
+                'output_calls': self.output_calls
+            }
+        }
+
+def analyze_project(project_path: str, output_file: str = None):
+    """Analyze a Go project and optionally save the report to a file"""
+    analyzer = GoProjectAnalyzer(project_path)
+    report = analyzer.analyze()
+    
+    if output_file:
+        with open(output_file, 'w') as f:
+            json.dump(report, f, indent=2)
+    
+    return report
+
+# Example usage
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) < 2:
+        print("Usage: python script.py <path_to_go_project> [output_file]")
+        sys.exit(1)
+    
+    project_path = sys.argv[1]
+    output_file = sys.argv[2] if len(sys.argv) > 2 else None
+    
+    report = analyze_project(project_path, output_file)
+    if not output_file:
+        print(json.dumps(report, indent=2))
