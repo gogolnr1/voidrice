@@ -1,0 +1,114 @@
+#!/bin/bash
+
+# Graphics Troubleshooting Script for Arch Linux
+# Creates a comprehensive report of graphics-related system information
+
+REPORT_FILE="graphics_analysis_$(date +%Y%m%d_%H%M%S).txt"
+
+# Helper function for section headers
+print_header() {
+    echo -e "\n=== $1 ===" | tee -a "$REPORT_FILE"
+}
+
+# Helper function to run commands and log output
+log_cmd() {
+    echo -e "\n$ $1" | tee -a "$REPORT_FILE"
+    eval "$1" 2>&1 | tee -a "$REPORT_FILE"
+}
+
+# Start fresh report
+echo "Graphics System Analysis Report" > "$REPORT_FILE"
+date >> "$REPORT_FILE"
+
+# System Information
+print_header "SYSTEM INFORMATION"
+log_cmd "uname -a"
+log_cmd "lspci -nnk | grep -A3 'VGA\|3D\|Display'"
+log_cmd "lsmod | grep -i 'nvidia\|nouveau\|amdgpu\|radeon\|intel\|i915'"
+
+# Kernel Parameters
+print_header "KERNEL PARAMETERS"
+log_cmd "cat /proc/cmdline"
+
+# Graphics Card Information
+print_header "GRAPHICS CARD DETAILS"
+log_cmd "lspci -v | grep -A10 'VGA\|3D'"
+log_cmd "glxinfo | grep 'direct rendering'"
+log_cmd "glxinfo | grep 'OpenGL'"
+
+# X Server Configuration
+print_header "X SERVER CONFIGURATION"
+log_cmd "ls -la /etc/X11/xorg.conf"
+log_cmd "ls -la /etc/X11/xorg.conf.d/"
+log_cmd "cat /etc/X11/xorg.conf 2>/dev/null"
+log_cmd "find /etc/X11/xorg.conf.d/ -type f -exec cat {} \;"
+
+# X Server Logs
+print_header "X SERVER LOGS"
+log_cmd "tail -n 100 /var/log/Xorg.0.log"
+log_cmd "journalctl -b 0 | grep -i 'x11\|nvidia\|nouveau\|amdgpu\|radeon\|intel\|i915'"
+
+# Display Manager Status
+print_header "DISPLAY MANAGER STATUS"
+log_cmd "systemctl status display-manager"
+log_cmd "ls -la /etc/systemd/system/display-manager.service"
+
+# Driver Information
+print_header "GRAPHICS DRIVER INFORMATION"
+log_cmd "pacman -Qs nvidia"
+log_cmd "pacman -Qs mesa"
+log_cmd "pacman -Qs xf86-video"
+
+# Monitor Information
+print_header "MONITOR INFORMATION"
+log_cmd "xrandr --verbose 2>/dev/null"
+
+# System Services Status
+print_header "RELEVANT SYSTEM SERVICES"
+log_cmd "systemctl status graphical.target"
+log_cmd "systemctl list-units --type=service | grep -i 'x11\|nvidia\|graphics'"
+
+# Power Management
+print_header "POWER MANAGEMENT"
+log_cmd "cat /sys/class/power_supply/*/status 2>/dev/null"
+log_cmd "cat /proc/acpi/button/power/*/state 2>/dev/null"
+
+# GPU Power Management
+print_header "GPU POWER MANAGEMENT"
+log_cmd "cat /sys/class/drm/card*/device/power_dpm_state 2>/dev/null"
+log_cmd "cat /sys/class/drm/card*/device/power_dpm_force_performance_level 2>/dev/null"
+
+# Memory Information
+print_header "MEMORY INFORMATION"
+log_cmd "free -h"
+log_cmd "vmstat 1 5"
+
+# Desktop Environment/Window Manager
+print_header "DESKTOP ENVIRONMENT"
+log_cmd "echo $XDG_CURRENT_DESKTOP"
+log_cmd "echo $DESKTOP_SESSION"
+log_cmd "ps aux | grep -i 'gnome\|kde\|xfce\|mate\|cinnamon\|i3\|sway'"
+
+echo -e "\nAnalysis complete. Results saved to $REPORT_FILE"
+echo "Please review the report and share it for further assistance."
+
+# Additional helpful information
+print_header "TROUBLESHOOTING NOTES"
+cat << EOF >> "$REPORT_FILE"
+Common issues to check:
+1. Kernel module loading order
+2. Incorrect/missing graphics drivers
+3. Xorg configuration issues
+4. Display manager configuration
+5. Power management conflicts
+6. Kernel parameter conflicts
+7. GPU hardware issues
+8. Monitor/cable connection issues
+
+Next steps:
+1. Review Xorg logs for errors
+2. Verify correct drivers are installed
+3. Check kernel module loading
+4. Verify display manager configuration
+5. Test with minimal Xorg configuration
+EOF
