@@ -1,3 +1,5 @@
+Graphics System Analysis Report
+Mon Feb 24 05:03:59 PM CET 2025
 
 === SYSTEM INFORMATION ===
 
@@ -7,7 +9,7 @@ Linux oz 6.13.2-arch1-1 #1 SMP PREEMPT_DYNAMIC Sat, 08 Feb 2025 18:54:55 +0000 x
 $ lspci -nnk | grep -A3 'VGA\|3D\|Display'
 00:01.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Kabini [Radeon HD 8280 / R3 Series] [1002:9836]
 	Subsystem: Lenovo Device [17aa:381a]
-	Kernel driver in use: radeon
+	Kernel driver in use: amdgpu
 	Kernel modules: radeon, amdgpu
 --
 01:00.0 Display controller [0380]: Advanced Micro Devices, Inc. [AMD/ATI] Sun LE [Radeon HD 8550M / R5 M230] [1002:666f]
@@ -16,28 +18,28 @@ $ lspci -nnk | grep -A3 'VGA\|3D\|Display'
 02:00.0 Network controller [0280]: Broadcom Inc. and subsidiaries BCM43142 802.11b/g/n [14e4:4365] (rev 01)
 
 $ lsmod | grep -i 'nvidia\|nouveau\|amdgpu\|radeon\|intel\|i915'
-btintel                69632  1 btusb
-ghash_clmulni_intel    16384  0
 snd_hda_intel          65536  2
 snd_intel_dspcfg       40960  1 snd_hda_intel
-bluetooth            1097728  34 btrtl,btmtk,btintel,btbcm,bnep,btusb,rfcomm
 snd_intel_sdw_acpi     16384  1 snd_intel_dspcfg
 snd_hda_codec         212992  4 snd_hda_codec_generic,snd_hda_codec_conexant,snd_hda_codec_hdmi,snd_hda_intel
+ghash_clmulni_intel    16384  0
+snd_hda_core          147456  5 snd_hda_codec_generic,snd_hda_codec_conexant,snd_hda_codec_hdmi,snd_hda_intel,snd_hda_codec
+btintel                69632  1 btusb
 aesni_intel           122880  3
 gf128mul               16384  2 polyval_generic,aesni_intel
-snd_hda_core          147456  5 snd_hda_codec_generic,snd_hda_codec_conexant,snd_hda_codec_hdmi,snd_hda_intel,snd_hda_codec
 crypto_simd            16384  1 aesni_intel
-snd_pcm               200704  4 snd_hda_codec_hdmi,snd_hda_intel,snd_hda_codec,snd_hda_core
+bluetooth            1097728  34 btrtl,btmtk,btintel,btbcm,bnep,btusb,rfcomm
 cryptd                 28672  3 crypto_simd,ghash_clmulni_intel
+snd_pcm               200704  4 snd_hda_codec_hdmi,snd_hda_intel,snd_hda_codec,snd_hda_core
 snd                   155648  16 snd_hda_codec_generic,snd_seq,snd_hda_codec_conexant,snd_seq_device,snd_hda_codec_hdmi,snd_hwdep,snd_hda_intel,snd_hda_codec,snd_timer,snd_pcm
 crc32c_intel           12288  5
-radeon               2117632  2
+radeon               2117632  0
 amdgpu              15163392  0
 amdxcp                 12288  1 amdgpu
 drm_exec               12288  1 amdgpu
 gpu_sched              65536  1 amdgpu
 drm_buddy              24576  1 amdgpu
-drm_ttm_helper         16384  2 amdgpu,radeon
+drm_ttm_helper         16384  3 amdgpu,radeon
 ttm                   106496  3 amdgpu,radeon,drm_ttm_helper
 video                  81920  3 amdgpu,radeon,ideapad_laptop
 i2c_algo_bit           20480  2 amdgpu,radeon
@@ -48,7 +50,7 @@ crc16                  12288  3 bluetooth,amdgpu,ext4
 === KERNEL PARAMETERS ===
 
 $ cat /proc/cmdline
-BOOT_IMAGE=/vmlinuz-linux root=UUID=47724061-75c5-4d61-9b44-306c11672b93 rw loglevel=3 radeon.cik_support=1 amdgpu.cik_support=0
+BOOT_IMAGE=/vmlinuz-linux root=UUID=47724061-75c5-4d61-9b44-306c11672b93 rw loglevel=3 radeon.cik_support=0 amdgpu.cik_support=1
 
 === GRAPHICS CARD DETAILS ===
 
@@ -62,7 +64,7 @@ $ lspci -v | grep -A10 'VGA\|3D'
 	Memory at f0b00000 (32-bit, non-prefetchable) [size=256K]
 	Expansion ROM at 000c0000 [disabled] [size=128K]
 	Capabilities: <access denied>
-	Kernel driver in use: radeon
+	Kernel driver in use: amdgpu
 	Kernel modules: radeon, amdgpu
 
 $ glxinfo | grep 'direct rendering'
@@ -82,7 +84,7 @@ drwxr-xr-x 2 root root 4096 Feb 16 20:02 .
 drwxr-xr-x 5 root root 4096 Feb 16 16:47 ..
 -rw-r--r-- 1 root root  106 Dec 28  2021 00-keyboard.conf
 -rw-r--r-- 1 root root  130 Jan 19  2022 20-evdi.conf
--rw-r--r-- 1 root root  203 Feb 16 21:50 20-radeon.conf
+-rw-r--r-- 1 root root  154 Feb 24 16:53 20-radeon.conf
 -rw-r--r-- 1 root root  240 Dec 28  2021 40-libinput.conf
 
 $ cat /etc/X11/xorg.conf 2>/dev/null
@@ -91,13 +93,9 @@ $ find /etc/X11/xorg.conf.d/ -type f -exec cat {} \;
 Section "Device"
     Identifier "Radeon"
     Driver "radeon"
-    Option "AccelMethod" "uxa"
-    Option "DRI" "2"
-EndSection
-
-Section "Monitor"
-    Identifier "LVDS1"
-    Option "DPMS" "false"
+    Option "AccelMethod" "glamor"
+    Option "DRI" "3"
+    Option "tearFree" "on"
 EndSection
 Section "OutputClass"
 	Identifier "DisplayLink"
@@ -120,57 +118,149 @@ Section "InputClass"
 EndSection
 === X SERVER LOGS ===
 
-$ tail -n 100 /var/log/Xorg.0.log
-tail: cannot open '/var/log/Xorg.0.log' for reading: No such file or directory
+$ tail -n 100 /home/toto/.local/share/xorg/Xorg.0.log
+[    57.890] (**) RADEON(0): Option "DRI" "3"
+[    57.890] (**) RADEON(0): Option "TearFree" "on"
+[    57.890] (==) RADEON(0): RGB weight 888
+[    57.890] (II) RADEON(0): Using 8 bits per RGB (8 bit DAC)
+[    57.890] (--) RADEON(0): Chipset: "KABINI" (ChipID = 0x9836)
+[    57.890] (II) Loading sub module "fb"
+[    57.890] (II) LoadModule: "fb"
+[    57.890] (II) Module "fb" already built-in
+[    57.890] (II) RADEON(0): Kernel too old missing accel information, assuming accel is working
+[    57.890] (II) Loading sub module "dri2"
+[    57.890] (II) LoadModule: "dri2"
+[    57.890] (II) Module "dri2" already built-in
+[    58.125] (II) Loading sub module "glamoregl"
+[    58.126] (II) LoadModule: "glamoregl"
+[    58.126] (II) Loading /usr/lib/xorg/modules/libglamoregl.so
+[    58.158] (II) Module glamoregl: vendor="X.Org Foundation"
+[    58.158] 	compiled for 1.21.1.15, module version = 1.0.1
+[    58.158] 	ABI class: X.Org ANSI C Emulation, version 0.4
+[    58.231] (II) RADEON(0): glamor X acceleration enabled on AMD Radeon HD 8200 / R3 Series (radeonsi, kabini, LLVM 19.1.7, DRM 3.59, 6.13.2-arch1-1)
+[    58.231] (II) RADEON(0): glamor detected, initialising EGL layer.
+[    58.231] (II) RADEON(0): KMS Color Tiling: disabled
+[    58.231] (II) RADEON(0): KMS Color Tiling 2D: enabled
+[    58.231] (**) RADEON(0): TearFree property default: on
+[    58.231] (II) RADEON(0): KMS Pageflipping: enabled
+[    58.231] (II) RADEON(0): Initializing outputs ...
+[    58.255] (II) RADEON(0): Output eDP has no monitor section
+[    58.257] (II) RADEON(0): Output HDMI-0 has no monitor section
+[    58.264] (II) RADEON(0): Output VGA-0 has no monitor section
+[    58.264] (II) RADEON(0): 3 crtcs needed for screen.
+[    58.264] (II) RADEON(0): Allocated crtc nr. 0 to this screen.
+[    58.264] (II) RADEON(0): Allocated crtc nr. 1 to this screen.
+[    58.264] (WW) RADEON(0): 3 ZaphodHeads crtcs unavailable. Some outputs will stay off.
+[    58.288] (II) RADEON(0): EDID for output eDP
+[    58.288] (II) RADEON(0): Manufacturer: CMN  Model: 15b7  Serial#: 0
+[    58.288] (II) RADEON(0): Year: 2013  Week: 30
+[    58.288] (II) RADEON(0): EDID Version: 1.4
+[    58.288] (II) RADEON(0): Digital Display Input
+[    58.289] (II) RADEON(0): 6 bits per channel
+[    58.289] (II) RADEON(0): Digital interface is DisplayPort
+[    58.289] (II) RADEON(0): Max Image Size [cm]: horiz.: 34  vert.: 19
+[    58.289] (II) RADEON(0): Gamma: 2.20
+[    58.289] (II) RADEON(0): No DPMS capabilities specified
+[    58.289] (II) RADEON(0): Supported color encodings: RGB 4:4:4 
+[    58.289] (II) RADEON(0): First detailed timing is preferred mode
+[    58.289] (II) RADEON(0): Preferred mode is native pixel format and refresh rate
+[    58.289] (II) RADEON(0): redX: 0.573 redY: 0.346   greenX: 0.341 greenY: 0.595
+[    58.289] (II) RADEON(0): blueX: 0.161 blueY: 0.115   whiteX: 0.313 whiteY: 0.329
+[    58.289] (II) RADEON(0): Manufacturer's mask: 0
+[    58.289] (II) RADEON(0): Supported detailed timing:
+[    58.289] (II) RADEON(0): clock: 76.4 MHz   Image Size:  344 x 193 mm
+[    58.289] (II) RADEON(0): h_active: 1366  h_sync: 1434  h_sync_end 1479 h_blank_end 1592 h_border: 0
+[    58.289] (II) RADEON(0): v_active: 768  v_sync: 772  v_sync_end 779 v_blanking: 800 v_border: 0
+[    58.289] (II) RADEON(0):  N156BGE-EB1
+[    58.289] (II) RADEON(0):  CMN
+[    58.289] (II) RADEON(0):  N156BGE-EB1
+[    58.289] (II) RADEON(0): EDID (in hex):
+[    58.289] (II) RADEON(0): 	00ffffffffffff000daeb71500000000
+[    58.289] (II) RADEON(0): 	1e1701049522137802e5659258579829
+[    58.289] (II) RADEON(0): 	1d505400000001010101010101010101
+[    58.289] (II) RADEON(0): 	010101010101da1d56e250002030442d
+[    58.289] (II) RADEON(0): 	470058c110000018000000fe004e3135
+[    58.289] (II) RADEON(0): 	364247452d4542310a20000000fe0043
+[    58.289] (II) RADEON(0): 	4d4e0a202020202020202020000000fe
+[    58.289] (II) RADEON(0): 	004e3135364247452d4542310a20008c
+[    58.289] (II) RADEON(0): Printing probed modes for output eDP
+[    58.290] (II) RADEON(0): Modeline "1366x768"x60.0   76.42  1366 1434 1479 1592  768 772 779 800 -hsync -vsync (48.0 kHz eP)
+[    58.290] (II) RADEON(0): Modeline "1280x720"x60.0   74.65  1280 1344 1472 1664  720 723 728 748 -hsync +vsync (44.9 kHz)
+[    58.290] (II) RADEON(0): Modeline "1152x768"x59.9   71.95  1152 1216 1328 1504  768 771 781 798 -hsync +vsync (47.8 kHz)
+[    58.290] (II) RADEON(0): Modeline "1024x768"x59.9   63.53  1024 1072 1176 1328  768 771 775 798 -hsync +vsync (47.8 kHz)
+[    58.290] (II) RADEON(0): Modeline "800x600"x60.0   38.31  800 832 912 1024  600 603 607 624 -hsync +vsync (37.4 kHz)
+[    58.290] (II) RADEON(0): Modeline "848x480"x59.9   31.65  848 872 952 1056  480 483 493 500 -hsync +vsync (30.0 kHz)
+[    58.290] (II) RADEON(0): Modeline "720x480"x59.9   26.85  720 744 808 896  480 483 493 500 -hsync +vsync (30.0 kHz)
+[    58.290] (II) RADEON(0): Modeline "640x480"x59.9   23.98  640 664 720 800  480 483 487 500 -hsync +vsync (30.0 kHz)
+[    58.291] (II) RADEON(0): EDID for output HDMI-0
+[    58.298] (II) RADEON(0): EDID for output VGA-0
+[    58.298] (II) RADEON(0): Output eDP connected
+[    58.298] (II) RADEON(0): Output HDMI-0 disconnected
+[    58.298] (II) RADEON(0): Output VGA-0 disconnected
+[    58.298] (II) RADEON(0): Using exact sizes for initial modes
+[    58.298] (II) RADEON(0): Output eDP using initial mode 1366x768 +0+0
+[    58.298] (==) RADEON(0): DPI set to (96, 96)
+[    58.298] (==) RADEON(0): Using gamma correction (1.0, 1.0, 1.0)
+[    58.298] (II) Loading sub module "ramdac"
+[    58.298] (II) LoadModule: "ramdac"
+[    58.299] (II) Module "ramdac" already built-in
+[    58.299] (II) RADEON(0): [DRI2] Setup complete
+[    58.299] (II) RADEON(0): [DRI2]   DRI driver: radeonsi
+[    58.299] (II) RADEON(0): [DRI2]   VDPAU driver: radeonsi
+[    58.299] (EE) RADEON(0): Failed to initialize surface manager
+[    58.299] (EE) 
+Fatal server error:
+[    58.299] (EE) AddScreen/ScreenInit failed for driver 0
+[    58.299] (EE) 
+[    58.299] (EE) 
+Please consult the The X.Org Foundation support 
+	 at http://wiki.x.org
+ for help. 
+[    58.299] (EE) Please also check the log file at "/home/toto/.local/share/xorg/Xorg.0.log" for additional information.
+[    58.299] (EE) 
+[    58.315] (EE) Server terminated with error (1). Closing log file.
 
 $ journalctl -b 0 | grep -i 'x11\|nvidia\|nouveau\|amdgpu\|radeon\|intel\|i915'
-Feb 24 16:43:48 oz kernel: Command line: BOOT_IMAGE=/vmlinuz-linux root=UUID=47724061-75c5-4d61-9b44-306c11672b93 rw loglevel=3 radeon.cik_support=1 amdgpu.cik_support=0
-Feb 24 16:43:48 oz kernel: Kernel command line: BOOT_IMAGE=/vmlinuz-linux root=UUID=47724061-75c5-4d61-9b44-306c11672b93 rw loglevel=3 radeon.cik_support=1 amdgpu.cik_support=0
-Feb 24 16:43:48 oz kernel: ata1.00: Model 'INTEL SSDSA2BW160G3H', rev '4PC10365', applying quirks: zeroaftertrim
-Feb 24 16:43:48 oz kernel: ata1.00: ATA-8: INTEL SSDSA2BW160G3H, 4PC10365, max UDMA/133
-Feb 24 16:43:48 oz kernel: scsi 0:0:0:0: Direct-Access     ATA      INTEL SSDSA2BW16 0365 PQ: 0 ANSI: 5
-Feb 24 16:43:48 oz kernel: [drm] amdgpu kernel modesetting enabled.
-Feb 24 16:43:48 oz kernel: amdgpu: vga_switcheroo: detected switching method \_SB_.PCI0.VGA_.ATPX handle
-Feb 24 16:43:48 oz kernel: amdgpu: ATPX version 1, functions 0x00000003
-Feb 24 16:43:48 oz kernel: amdgpu: Virtual CRAT table created for CPU
-Feb 24 16:43:48 oz kernel: amdgpu: Topology: Add CPU node
-Feb 24 16:43:48 oz kernel: amdgpu 0000:00:01.0: amdgpu: CIK support provided by radeon.
-Feb 24 16:43:48 oz kernel: amdgpu 0000:00:01.0: amdgpu: Use radeon.cik_support=0 amdgpu.cik_support=1 to override.
-Feb 24 16:43:48 oz kernel: amdgpu 0000:01:00.0: amdgpu: SI support provided by radeon.
-Feb 24 16:43:48 oz kernel: amdgpu 0000:01:00.0: amdgpu: Use radeon.si_support=0 amdgpu.si_support=1 to override.
-Feb 24 16:43:48 oz kernel: [drm] radeon kernel modesetting enabled.
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: vgaarb: deactivate vga console
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: VRAM: 512M 0x0000000000000000 - 0x000000001FFFFFFF (512M used)
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: GTT: 2048M 0x0000000020000000 - 0x000000009FFFFFFF
-Feb 24 16:43:48 oz kernel: [drm] radeon: 512M of VRAM memory ready
-Feb 24 16:43:48 oz kernel: [drm] radeon: 2048M of GTT memory ready.
-Feb 24 16:43:48 oz kernel: [drm] radeon: dpm initialized
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: WB enabled
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: fence driver on ring 0 use gpu addr 0x0000000020000c00
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: fence driver on ring 1 use gpu addr 0x0000000020000c04
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: fence driver on ring 2 use gpu addr 0x0000000020000c08
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: fence driver on ring 3 use gpu addr 0x0000000020000c0c
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: fence driver on ring 4 use gpu addr 0x0000000020000c10
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: fence driver on ring 5 use gpu addr 0x0000000000078d30
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: fence driver on ring 6 use gpu addr 0x0000000020000c18
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: fence driver on ring 7 use gpu addr 0x0000000020000c1c
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: radeon: using MSI.
-Feb 24 16:43:48 oz kernel: [drm] radeon: irq initialized.
-Feb 24 16:43:48 oz kernel: [drm] radeon atom DIG backlight initialized
-Feb 24 16:43:48 oz kernel: [drm] Radeon Display Connectors
-Feb 24 16:43:48 oz kernel: [drm] Initialized radeon 2.50.0 for 0000:00:01.0 on minor 0
-Feb 24 16:43:48 oz kernel: fbcon: radeondrmfb (fb0) is primary device
-Feb 24 16:43:48 oz kernel: radeon 0000:00:01.0: [drm] fb0: radeondrmfb frame buffer device
-Feb 24 16:43:48 oz kernel: radeon 0000:01:00.0: SI support disabled by module param
-Feb 24 16:43:49 oz systemd[1]: Found device INTEL_SSDSA2BW160G3H efi.
-Feb 24 16:43:49 oz systemd[1]: Found device INTEL_SSDSA2BW160G3H 41G-PART.
-Feb 24 16:43:49 oz systemd[1]: Found device INTEL_SSDSA2BW160G3H Linux\x20swap.
-Feb 24 16:43:50 oz kernel: Modules linked in: videobuf2_memops snd_intel_sdw_acpi wl(POE+) sha256_ssse3 rtsx_usb_ms snd_hda_codec videobuf2_v4l2 sha1_ssse3 videobuf2_common aesni_intel memstick gf128mul snd_hda_core videodev snd_hwdep vfat fat crypto_simd r8169 snd_pcm mc realtek cfg80211 sp5100_tco psmouse cryptd mdio_devres snd_timer i2c_piix4 k10temp acpi_cpufreq fam15h_power i2c_smbus libphy snd ideapad_laptop platform_profile sparse_keymap soundcore rfkill mac_hid usbhid crypto_user loop dm_mod nfnetlink ip_tables x_tables ext4 crc32c_generic mbcache jbd2 sdhci_pci serio_raw atkbd sdhci_uhs2 libps2 sdhci rtsx_usb_sdmmc vivaldi_fmap cqhci mmc_core rtsx_usb crc32c_intel sr_mod cdrom i8042 serio radeon amdgpu amdxcp drm_exec gpu_sched drm_buddy drm_ttm_helper ttm video wmi i2c_algo_bit drm_suballoc_helper drm_display_helper cec crc16
-Feb 24 16:43:50 oz kernel:  ? idempotent_init_module+0x115/0x310
-Feb 24 16:43:50 oz kernel: snd_hda_intel 0000:00:01.1: Force to non-snoop mode
-Feb 24 16:43:50 oz kernel: snd_hda_intel 0000:00:01.1: bound 0000:00:01.0 (ops radeon_audio_component_bind_ops [radeon])
-Feb 24 16:43:54 oz kernel: Modules linked in: nft_fib_inet nft_fib_ipv4 nft_fib_ipv6 nft_fib nft_reject_inet nf_reject_ipv4 nf_reject_ipv6 nft_reject nft_ct nft_chain_nat ip6table_nat ip6table_mangle ip6table_raw ip6table_security iptable_nat nf_nat overlay nf_conntrack nf_defrag_ipv6 nf_defrag_ipv4 iptable_mangle iptable_raw iptable_security nf_tables libcrc32c ip6table_filter ip6_tables iptable_filter amd_freq_sensitivity cmac algif_hash algif_skcipher kvm_amd af_alg joydev bnep ccp mousedev kvm btusb btrtl crct10dif_pclmul btintel crc32_pclmul polyval_clmulni btbcm uvcvideo snd_hda_codec_conexant polyval_generic snd_hda_codec_generic snd_hda_codec_hdmi btmtk ghash_clmulni_intel snd_hda_intel videobuf2_vmalloc sha512_ssse3 uvc snd_intel_dspcfg bluetooth videobuf2_memops snd_intel_sdw_acpi wl(POE) sha256_ssse3 rtsx_usb_ms snd_hda_codec videobuf2_v4l2 sha1_ssse3 videobuf2_common aesni_intel memstick gf128mul snd_hda_core videodev snd_hwdep vfat fat crypto_simd r8169 snd_pcm mc realtek cfg80211 sp5100_tco psmouse cryptd mdio_devres
-Feb 24 16:43:54 oz kernel:  snd_timer i2c_piix4 k10temp acpi_cpufreq fam15h_power i2c_smbus libphy snd ideapad_laptop platform_profile sparse_keymap soundcore rfkill mac_hid usbhid crypto_user loop dm_mod nfnetlink ip_tables x_tables ext4 crc32c_generic mbcache jbd2 sdhci_pci serio_raw atkbd sdhci_uhs2 libps2 sdhci rtsx_usb_sdmmc vivaldi_fmap cqhci mmc_core rtsx_usb crc32c_intel sr_mod cdrom i8042 serio radeon amdgpu amdxcp drm_exec gpu_sched drm_buddy drm_ttm_helper ttm video wmi i2c_algo_bit drm_suballoc_helper drm_display_helper cec crc16
+Feb 24 17:00:13 oz kernel: Command line: BOOT_IMAGE=/vmlinuz-linux root=UUID=47724061-75c5-4d61-9b44-306c11672b93 rw loglevel=3 radeon.cik_support=0 amdgpu.cik_support=1
+Feb 24 17:00:13 oz kernel: Kernel command line: BOOT_IMAGE=/vmlinuz-linux root=UUID=47724061-75c5-4d61-9b44-306c11672b93 rw loglevel=3 radeon.cik_support=0 amdgpu.cik_support=1
+Feb 24 17:00:13 oz kernel: ata1.00: Model 'INTEL SSDSA2BW160G3H', rev '4PC10365', applying quirks: zeroaftertrim
+Feb 24 17:00:13 oz kernel: ata1.00: ATA-8: INTEL SSDSA2BW160G3H, 4PC10365, max UDMA/133
+Feb 24 17:00:13 oz kernel: scsi 0:0:0:0: Direct-Access     ATA      INTEL SSDSA2BW16 0365 PQ: 0 ANSI: 5
+Feb 24 17:00:13 oz kernel: [drm] amdgpu kernel modesetting enabled.
+Feb 24 17:00:13 oz kernel: amdgpu: vga_switcheroo: detected switching method \_SB_.PCI0.VGA_.ATPX handle
+Feb 24 17:00:13 oz kernel: amdgpu: ATPX version 1, functions 0x00000003
+Feb 24 17:00:13 oz kernel: amdgpu: Virtual CRAT table created for CPU
+Feb 24 17:00:13 oz kernel: amdgpu: Topology: Add CPU node
+Feb 24 17:00:13 oz kernel: amdgpu 0000:00:01.0: amdgpu: Fetched VBIOS from VFCT
+Feb 24 17:00:13 oz kernel: amdgpu: ATOM BIOS: 113-C53500-X06
+Feb 24 17:00:13 oz kernel: kfd kfd: amdgpu: KABINI  not supported in kfd
+Feb 24 17:00:13 oz kernel: amdgpu 0000:00:01.0: vgaarb: deactivate vga console
+Feb 24 17:00:13 oz kernel: amdgpu 0000:00:01.0: amdgpu: Trusted Memory Zone (TMZ) feature not supported
+Feb 24 17:00:13 oz kernel: amdgpu 0000:00:01.0: amdgpu: VRAM: 512M 0x0000000F00000000 - 0x0000000F1FFFFFFF (512M used)
+Feb 24 17:00:13 oz kernel: amdgpu 0000:00:01.0: amdgpu: GART: 1024M 0x0000000000000000 - 0x000000003FFFFFFF
+Feb 24 17:00:13 oz kernel: [drm] amdgpu: 512M of VRAM memory ready
+Feb 24 17:00:13 oz kernel: [drm] amdgpu: 3694M of GTT memory ready.
+Feb 24 17:00:13 oz kernel: [drm] amdgpu: dpm initialized
+Feb 24 17:00:13 oz kernel: [drm] amdgpu atom DIG backlight initialized
+Feb 24 17:00:13 oz kernel: [drm] AMDGPU Display Connectors
+Feb 24 17:00:13 oz kernel: amdgpu 0000:00:01.0: amdgpu: SE 1, SH per SE 1, CU per SH 2, active_cu_number 2
+Feb 24 17:00:13 oz kernel: amdgpu 0000:00:01.0: amdgpu: Runtime PM not available
+Feb 24 17:00:13 oz kernel: [drm] Initialized amdgpu 3.59.0 for 0000:00:01.0 on minor 1
+Feb 24 17:00:13 oz kernel: fbcon: amdgpudrmfb (fb0) is primary device
+Feb 24 17:00:13 oz kernel: [drm:amdgpu_device_ip_set_powergating_state [amdgpu]] *ERROR* set_powergating_state of IP block <vce_v2_0> failed -22
+Feb 24 17:00:13 oz kernel: amdgpu 0000:00:01.0: [drm] fb0: amdgpudrmfb frame buffer device
+Feb 24 17:00:13 oz kernel: amdgpu 0000:01:00.0: amdgpu: SI support provided by radeon.
+Feb 24 17:00:13 oz kernel: amdgpu 0000:01:00.0: amdgpu: Use radeon.si_support=0 amdgpu.si_support=1 to override.
+Feb 24 17:00:13 oz kernel: [drm] radeon kernel modesetting enabled.
+Feb 24 17:00:13 oz kernel: radeon 0000:01:00.0: SI support disabled by module param
+Feb 24 17:00:14 oz systemd[1]: Found device INTEL_SSDSA2BW160G3H 41G-PART.
+Feb 24 17:00:14 oz systemd[1]: Found device INTEL_SSDSA2BW160G3H Linux\x20swap.
+Feb 24 17:00:14 oz systemd[1]: Found device INTEL_SSDSA2BW160G3H efi.
+Feb 24 17:00:15 oz kernel: Modules linked in: snd_intel_dspcfg uvc polyval_clmulni wl(POE+) snd_intel_sdw_acpi videobuf2_memops polyval_generic videobuf2_v4l2 snd_hda_codec ghash_clmulni_intel sha512_ssse3 btusb videobuf2_common sha256_ssse3 btrtl sha1_ssse3 snd_hda_core btintel videodev aesni_intel r8169 btbcm snd_hwdep gf128mul rtsx_usb_ms btmtk vfat crypto_simd memstick bluetooth fat realtek mc cryptd snd_pcm mdio_devres cfg80211 sp5100_tco psmouse i2c_piix4 k10temp snd_timer acpi_cpufreq fam15h_power ideapad_laptop libphy platform_profile snd i2c_smbus sparse_keymap rfkill soundcore mac_hid usbhid crypto_user loop dm_mod nfnetlink ip_tables x_tables ext4 crc32c_generic mbcache jbd2 sdhci_pci serio_raw atkbd sdhci_uhs2 libps2 sdhci rtsx_usb_sdmmc vivaldi_fmap cqhci mmc_core crc32c_intel sr_mod cdrom rtsx_usb i8042 serio radeon amdgpu amdxcp drm_exec gpu_sched drm_buddy drm_ttm_helper ttm video wmi i2c_algo_bit drm_suballoc_helper drm_display_helper cec crc16
+Feb 24 17:00:15 oz kernel:  ? idempotent_init_module+0x115/0x310
+Feb 24 17:00:15 oz kernel: snd_hda_intel 0000:00:01.1: Force to non-snoop mode
+Feb 24 17:00:19 oz kernel: Modules linked in: nft_fib_inet nft_fib_ipv4 nft_fib_ipv6 nft_fib nft_reject_inet nf_reject_ipv4 nf_reject_ipv6 nft_reject nft_ct nft_chain_nat ip6table_nat ip6table_mangle ip6table_raw ip6table_security iptable_nat nf_nat overlay nf_conntrack nf_defrag_ipv6 nf_defrag_ipv4 iptable_mangle iptable_raw iptable_security nf_tables libcrc32c ip6table_filter ip6_tables iptable_filter cmac algif_hash algif_skcipher af_alg bnep amd_freq_sensitivity kvm_amd ccp joydev mousedev snd_hda_codec_hdmi snd_hda_codec_conexant kvm snd_hda_codec_generic snd_hda_intel uvcvideo crct10dif_pclmul videobuf2_vmalloc crc32_pclmul snd_intel_dspcfg uvc polyval_clmulni wl(POE) snd_intel_sdw_acpi videobuf2_memops polyval_generic videobuf2_v4l2 snd_hda_codec ghash_clmulni_intel sha512_ssse3 btusb videobuf2_common sha256_ssse3 btrtl sha1_ssse3 snd_hda_core btintel videodev aesni_intel r8169 btbcm snd_hwdep gf128mul rtsx_usb_ms btmtk vfat crypto_simd memstick bluetooth fat realtek mc cryptd snd_pcm mdio_devres cfg80211 sp5100_tco psmouse
+Feb 24 17:00:19 oz kernel:  i2c_piix4 k10temp snd_timer acpi_cpufreq fam15h_power ideapad_laptop libphy platform_profile snd i2c_smbus sparse_keymap rfkill soundcore mac_hid usbhid crypto_user loop dm_mod nfnetlink ip_tables x_tables ext4 crc32c_generic mbcache jbd2 sdhci_pci serio_raw atkbd sdhci_uhs2 libps2 sdhci rtsx_usb_sdmmc vivaldi_fmap cqhci mmc_core crc32c_intel sr_mod cdrom rtsx_usb i8042 serio radeon amdgpu amdxcp drm_exec gpu_sched drm_buddy drm_ttm_helper ttm video wmi i2c_algo_bit drm_suballoc_helper drm_display_helper cec crc16
 
 === DISPLAY MANAGER STATUS ===
 
@@ -211,18 +301,18 @@ $ xrandr --verbose 2>/dev/null
 $ systemctl status graphical.target
 ● graphical.target - Graphical Interface
      Loaded: loaded (/usr/lib/systemd/system/graphical.target; static)
-     Active: active since Mon 2025-02-24 16:44:03 CET; 2min 13s ago
- Invocation: d48aecbda68b422b8247a4f1c7dd4cca
+     Active: active since Mon 2025-02-24 17:00:28 CET; 3min 34s ago
+ Invocation: 796f7c4258a94018b462827aba9d0b9b
        Docs: man:systemd.special(7)
 
-Feb 24 16:44:03 oz systemd[1]: Reached target Graphical Interface.
+Feb 24 17:00:28 oz systemd[1]: Reached target Graphical Interface.
 
 $ systemctl list-units --type=service | grep -i 'x11\|nvidia\|graphics'
 
 === POWER MANAGEMENT ===
 
 $ cat /sys/class/power_supply/*/status 2>/dev/null
-Full
+Discharging
 
 $ cat /proc/acpi/button/power/*/state 2>/dev/null
 
@@ -238,17 +328,17 @@ auto
 
 $ free -h
                total        used        free      shared  buff/cache   available
-Mem:           7.2Gi       617Mi       6.2Gi       1.2Mi       702Mi       6.6Gi
+Mem:           7.2Gi       520Mi       6.4Gi       1.2Mi       568Mi       6.7Gi
 Swap:          8.0Gi          0B       8.0Gi
 
 $ vmstat 1 5
 procs -----------memory---------- ---swap-- -----io---- -system-- -------cpu-------
  r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st gu
- 0  0      0 6453368 104272 615476   0    0  3842   301 1688    3  5  8 86  1  0  0
- 0  0      0 6445176 104272 616944   0    0  1408     0  410  278  0  1 99  0  0  0
- 0  0      0 6445176 104272 616944   0    0     0     0  174  191  0  0 100 0  0  0
- 0  0      0 6451568 104272 616944   0    0     0     0  510  344  0  2 98  0  0  0
- 0  0      0 6450512 104280 616952   0    0     0   212  775  541  1  3 96  0  0  0
+ 2  0      0 6689076 94468 487936    0    0  2170    83 1058    1  3  6 91  1  0  0
+ 0  0      0 6688964 94468 488040    0    0     0     0  164  715  0  1 99  0  0  0
+ 0  0      0 6688964 94468 488040    0    0     0     0  148  169  0  0 100 0  0  0
+ 0  0      0 6688620 94468 488040    0    0     0     0  541  247  1  2 97  0  0  0
+ 0  0      0 6683860 94468 489448    0    0  1408   484  607  427  1  3 96  1  0  0
 
 === DESKTOP ENVIRONMENT ===
 
@@ -259,10 +349,23 @@ $ echo
 
 
 $ ps aux | grep -i 'gnome\|kde\|xfce\|mate\|cinnamon\|i3\|sway'
-root          43  0.0  0.0      0     0 ?        S    16:43   0:00 [kdevtmpfs]
-toto        3002  0.0  0.0   6552  3984 tty2     S+   16:46   0:00 grep -i gnome\|kde\|xfce\|mate\|cinnamon\|i3\|sway
-
-Analysis complete. Results saved to graphics_analysis_20250224_164615.txt
-Please review the report and share it for further assistance.
+root          43  0.0  0.0      0     0 ?        S    16:59   0:00 [kdevtmpfs]
+toto        2526  0.0  0.0   6552  4008 tty2     S+   17:04   0:00 grep -i gnome\|kde\|xfce\|mate\|cinnamon\|i3\|sway
 
 === TROUBLESHOOTING NOTES ===
+Common issues to check:
+1. Kernel module loading order
+2. Incorrect/missing graphics drivers
+3. Xorg configuration issues
+4. Display manager configuration
+5. Power management conflicts
+6. Kernel parameter conflicts
+7. GPU hardware issues
+8. Monitor/cable connection issues
+
+Next steps:
+1. Review Xorg logs for errors
+2. Verify correct drivers are installed
+3. Check kernel module loading
+4. Verify display manager configuration
+5. Test with minimal Xorg configuration
