@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+# Enhanced bash timer with multiple features
+title="Bash Timer"
+version="2.0"
+
+# Default messages
+prompt="Enter timer duration (e.g. 5m, 2h30m, 45s):"
+alert="Timer Complete!"
+
+# Help message
+show_help() {
+    cat << EOF
+Usage: timer [OPTIONS] [TIME]
+A simple timer utility
+
+Options:
+    -h, --help      Show this help message
+    -q, --quiet     Silent mode (no sound)
+    -m, --message   Custom alert message
+    -l, --loop      Loop the timer
+    -p, --pomodoro  Start pomodoro timer (25m work, 5m break)
+
+Time format:
+    45s = 45 seconds
+    5m  = 5 minutes
+    2h  = 2 hours
+    Combinations like 1h30m or 90s are supported
+
+Examples:
+    timer 25m
+    timer -m "Coffee break!" 5m
+    timer --pomodoro
+EOF
+    exit 0
+}
+
+# Convert time string to seconds
+convert_to_seconds() {
+    local time=$1
+    local seconds=0
+    
+    # Handle combined formats like 1h30m
+    if [[ $time =~ ([0-9]+h)?([0-9]+m)?([0-9]+s)?$ ]]; then
+        [[ $time =~ ([0-9]+)h ]] && seconds=$((seconds + ${BASH_REMATCH[1]} * 3600))
+        [[ $time =~ ([0-9]+)m ]] && seconds=$((seconds + ${BASH_REMATCH[1]} * 60))
+        [[ $time =~ ([0-9]+)s ]] && seconds=$((seconds + ${BASH_REMATCH[1]}))
+        # If only numbers provided, assume seconds
+        [[ $time =~ ^[0-9]+$ ]] && seconds=$time
+    fi
+    
+    echo $seconds
+}
+
+# Format seconds to readable time
+format_time() {
+    local seconds=$1
+    printf "%02d:%02d:%02d" $((seconds/3600)) $((seconds%3600/60)) $((seconds%60))
+}
+
+# Alert function
+alert_func() {
+    local message=${1:-$alert}
+    echo -e "\n${message}"
+    
+    # Only make sound if not in quiet mode
+    if [ "$quiet_mode" != "true" ]; then
+        if command -v espeak >/dev/null 2>&1; then
+            espeak "${message}" >/dev/null 2>&1
+        fi
+    fi
+    
+    # Send desktop notification if available
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send "${title}" "${message}"
+    fi
+}
+
+# Timer countdown display
+countdown() {
+    local seconds=$1
+    local start_time=$(date +%H:%M)
+    
+    while [ $seconds -gt 0 ]; do
+        echo -ne "\rTime remaining: $(format_time $seconds)"
+        sleep 1
+        ((seconds--))
+    done
+}
+
+# Main timer function
+run_timer() {
+    local duration=$1
+    local message=$2
+    
+    countdown $duration
+    alert_func "$message"
+}
+
+# Pomodoro mode
+pomodoro_mode() {
+    while true; do
+        echo "Work session starting..."
+        run_timer 1500 "Work session complete! Take a 5-minute break."
+        read -t 5 -p "Press Enter to start break or Ctrl+C to exit..."
+        
+        echo "Break starting..."
+        run_timer 300 "Break complete! Ready for next session?"
+        read -p "Press Enter to start next session or Ctrl+C to exit..."
+    done
+}
+
+# Parse command line arguments
+quiet_mode=false
+custom_message="$alert"
+loop_mode=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            ;;
+        -q|--quiet)
+            quiet_mode=true
+            shift
+            ;;
+        -m|--message)
+            custom_message="$2"
+            shift 2
+            ;;
+        -l|--loop)
+            loop_mode=true
+            shift
+            ;;
+        -p|--pomodoro)
+            pomodoro_mode
+            exit 0
+            ;;
+        *)
+            time_input=$1
+            break
+            ;;
+    esac
+done
+
+# If no time provided via arguments, ask for it
+if [ -z "$time_input" ]; then
+    echo "$prompt"
+    read time_input
+fi
+
+# Convert input time to seconds
+seconds=$(convert_to_seconds "$time_input")
+
+# Run timer
+if [ "$loop_mode" = true ]; then
+    while true; do
+        run_timer $seconds "$custom_message"
+        read -p "Timer complete. Press Enter to restart or Ctrl+C to exit..."
+    done
+else
+    run_timer $seconds "$custom_message"
+fi
+
+exit 0
