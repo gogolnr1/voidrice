@@ -82,8 +82,7 @@ _yt_dlp() {
 		if [[ -z $filename ]]; then
 			# Get filename from yt-dlp template
 			filename=$(yt-dlp --print filename \
-							 --restrict-filenames \
-							 -o '%(upload_date)s – %(channel)s - %(title).200s' \
+							 -o '%(channel)s - %(upload_date)s – %(title).200s' \
 							 "$get_url" | \
 					  sed -e 's/：/:/g' \
 						  -e 's/[\\/*?"<>|]/-/g' \
@@ -103,7 +102,6 @@ _yt_dlp() {
 			"--merge-output-format" "mkv" \
 			"--exec" "'touch -m -a {}'" \
 			"$resolution" \
-			"--restrict-filenames" \
 			"-o" "\"${base_filename}.%(ext)s\"")
 		
 		eval $(printf "%s " "${cmd[@]}")
