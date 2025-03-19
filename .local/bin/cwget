@@ -116,7 +116,7 @@ generate_filename() {
 		fi
 		
 		# If still no filename, prompt user
-		if [[ -z "$filename" ]]; then
+		if [[ -z "$filename" ]] && [[ -z "$ytbraw" ]]; then
 			read -p "Enter filename:" filename
 			[[ -z "$filename" ]] && error_exit "No filename provided"
 		fi
@@ -137,8 +137,8 @@ generate_filename() {
 		fi
 	fi
 
-	# Only add extension for non-yt downloads
-	if [[ -z "$yt" ]] && [[ -n "$filename" ]] && [[ "$filename" != *.* ]]; then
+	# Only add extension for non-yt downloads if the filename doesn't already have an extension
+	if [[ -z "$yt" ]] && [[ -n "$filename" ]] && [[ ! "$filename" =~ \.[^.]+$ ]]; then
 		filename="$filename.mp4"
 	fi
 }
