@@ -1,20 +1,58 @@
 #!/bin/bash
-# the selected key is used to copy the value to clipboard
-
+# Extract metadata from media files and copy selected values to clipboard
 
 input_file="$1"
 
-# Given a file with metadata included,
-# fetch a list with mediainfo and present it to dmenu,
-# extract selected metadata key
-metadata_key=$(mediainfo --Output=JSON "$input_file" | jq -r '.media.track[] | select(.["@type"] == "General") | .extra | to_entries[] | "\(.key):\(.value)"' | grep -E -o "^.{0,200}" - | dxf "Select metadata key:" | sed 's/:.*//')
+if [ -z "$input_file" ] || [ ! -f "$input_file" ]; then
+    echo "Error: Please provide a valid input file"
+    echo "Usage: metafetch <file>"
+    exit 1
+fi
 
-# Extract the metadata value using mediainfo,
-# replace line seperator ' / ' with a regular new line '\n'
-metadata_value=$(mediainfo --Output="General;%$metadata_key%" "$input_file" | sed 's/\s\/\s/\n/g')
+# Extract metadata using direct and reliable method
+# Only limit display length in the selection menu, not the actual data
+metadata_list=$(mediainfo "$input_file" | grep -v "^$" | grep ":" | sed 's/^[ ]*//; s/[ ]*:[ ]*/:/g')
 
-# Copy the metadata value to the clipboard
+if [ -z "$metadata_list" ]; then
+    echo "No metadata found in the file."
+    exit 1
+fi
+
+# Create a temporary file for keeping the full metadata
+temp_file=$(mktemp)
+echo "$metadata_list" > "$temp_file"
+
+# Present the list of metadata keys to the user, but truncate for display only
+# We're limiting display to 100 chars for keys to make selection easier
+selected_line=$(cat "$temp_file" | cut -c 1-100 | dxf "Select metadata key:")
+
+if [ -z "$selected_line" ]; then
+    rm "$temp_file"
+    echo "No key selected."
+    exit 0
+fi
+
+# Get the key name from the selected truncated line
+metadata_key=$(echo "$selected_line" | cut -d: -f1)
+
+# Find the complete entry from the temp file using grep
+full_entry=$(grep "^$metadata_key:" "$temp_file")
+
+# Extract the complete value without truncation
+metadata_value=$(echo "$full_entry" | cut -d: -f2- | sed 's/^ //')
+
+# Cleanup
+rm "$temp_file"
+
+# Copy the full value to clipboard
 echo -n "$metadata_value" | xclip -selection c
 
-# Present selected value
-printf "'$metadata_key' copied to clipboard:\n\n$metadata_value"
+# Show what was copied (truncated for display if very long)
+echo "'$metadata_key' copied to clipboard:"
+echo
+if [ ${#metadata_value} -gt 1000 ]; then
+    echo "${metadata_value:0:1000}..."
+    echo "[${#metadata_value} characters copied to clipboard]"
+else
+    echo "$metadata_value"
+fi
