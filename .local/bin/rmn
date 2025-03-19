@@ -75,4 +75,5 @@ if [[ ! -d $1 ]] &&
 	exit 0
 fi
 
+# Delete files with -I flag (-I meaning interactive)
 rmx -I "$@"
