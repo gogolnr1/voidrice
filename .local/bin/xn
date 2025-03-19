@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# xn - open the nth file (as displayed by lsn) with the default application
+# Usage: xn <number>
+
+src_file="$(which lsn)"
+source "$src_file"
+source "$HOME/.config/shell/rc.d/00_colors"
+
+count=${#lines[@]}
+
+# if argument is not directory
+# and argument is number
+# and number is in range, then execute file number with xdg-open
+if [[ ! -d $1 ]] &&
+   [[ "$1" =~ ^[0-9]+$ ]] &&
+   (("$1" >= 1 && "$1" <= $count)); then
+	dest="${lines_nc[(($1-1))]}"
+	xdg-open "$dest"
+	exit 0
+fi
