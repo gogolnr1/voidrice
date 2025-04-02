@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+    <mime-type type="video/mp4">
+        <glob pattern="*.mp4.part"/>
+    </mime-type>
+    <mime-type type="video/x-matroska">
+        <glob pattern="*.mkv.part"/>
+    </mime-type>
+    <mime-type type="video/webm">
+        <glob pattern="*.webm.part"/>
+    </mime-type>
+</mime-info>
